@@ -1,7 +1,10 @@
+use std::path::Path;
+
 use eframe::egui;
+use serde::{Deserialize, Serialize};
 
 /// All available bot templates.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum TemplateKind {
     CodeAgent,
 }
@@ -23,12 +26,12 @@ impl TemplateKind {
 }
 
 /// Template-specific config, one variant per template.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum TemplateConfig {
     CodeAgent(CodeAgentConfig),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct CodeAgentConfig {
     pub work_dir: String,
     pub model: String,
@@ -192,4 +195,29 @@ impl WizardState {
 
         result
     }
+}
+
+/// A saved instance that can be persisted to .custodex/ and restored on startup.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SavedInstance {
+    pub id: String,
+    pub template: TemplateKind,
+    pub config: TemplateConfig,
+}
+
+/// Save a list of instances to a JSON file in the custodex directory.
+pub fn save_instances(custodex_dir: &Path, instances: &[SavedInstance]) -> std::io::Result<()> {
+    let path = custodex_dir.join("instances.json");
+    let json = serde_json::to_string_pretty(instances)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    std::fs::write(path, json)
+}
+
+/// Load saved instances from the custodex directory. Returns empty vec if file doesn't exist.
+pub fn load_instances(custodex_dir: &Path) -> Vec<SavedInstance> {
+    let path = custodex_dir.join("instances.json");
+    let Ok(json) = std::fs::read_to_string(path) else {
+        return Vec::new();
+    };
+    serde_json::from_str(&json).unwrap_or_default()
 }

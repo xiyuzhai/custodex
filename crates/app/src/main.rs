@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use all_bots::WizardState;
+use all_bots::{SavedInstance, TemplateConfig, TemplateKind, WizardState, save_instances, load_instances};
 use dashboard::{DashboardConfig, gui::DashboardPanels, new_dashboard};
 use eframe::egui;
 
@@ -38,17 +38,22 @@ fn main() {
         token,
         dashboard.clone(),
         work_dir,
-        custodex_dir,
+        custodex_dir.clone(),
         Some(sandbox_exe),
     );
 
     let panels = DashboardPanels::new(rt, dashboard, bot_launcher);
 
+    // Load saved instances
+    let saved = load_instances(&custodex_dir);
+
     let options = eframe::NativeOptions::default();
     eframe::run_native(
         "custodex",
         options,
-        Box::new(move |_cc| Ok(Box::new(CustodexApp::new(panels)) as Box<dyn eframe::App>)),
+        Box::new(move |_cc| {
+            Ok(Box::new(CustodexApp::new(panels, saved, custodex_dir)) as Box<dyn eframe::App>)
+        }),
     )
     .expect("eframe failed");
 }
@@ -56,13 +61,46 @@ fn main() {
 struct CustodexApp {
     panels: DashboardPanels,
     wizard: WizardState,
+    saved_instances: Vec<SavedInstance>,
+    custodex_dir: PathBuf,
 }
 
 impl CustodexApp {
-    fn new(panels: DashboardPanels) -> Self {
+    fn new(panels: DashboardPanels, saved_instances: Vec<SavedInstance>, custodex_dir: PathBuf) -> Self {
+        if !saved_instances.is_empty() {
+            let mut d = panels.dashboard.lock().unwrap();
+            d.push_log(
+                None,
+                format!("Restored {} saved instance(s).", saved_instances.len()),
+            );
+        }
         Self {
             panels,
             wizard: WizardState::default(),
+            saved_instances,
+            custodex_dir,
+        }
+    }
+
+    fn add_instance(&mut self, config: TemplateConfig) {
+        let template = match &config {
+            TemplateConfig::CodeAgent(_) => TemplateKind::CodeAgent,
+        };
+        let id = format!("{}-{}", template.name(), self.saved_instances.len());
+        let saved = SavedInstance {
+            id: id.clone(),
+            template,
+            config,
+        };
+        self.saved_instances.push(saved);
+
+        // Persist
+        if let Err(e) = save_instances(&self.custodex_dir, &self.saved_instances) {
+            let mut d = self.panels.dashboard.lock().unwrap();
+            d.push_log(None, format!("Failed to save instances: {e}"));
+        } else {
+            let mut d = self.panels.dashboard.lock().unwrap();
+            d.push_log(None, format!("Instance {id} created and saved."));
         }
     }
 }
@@ -81,6 +119,20 @@ impl eframe::App for CustodexApp {
             .default_width(250.0)
             .show(ctx, |ui| {
                 let new_clicked = self.panels.render_instances_panel(ui);
+
+                // Show saved instances
+                if !self.saved_instances.is_empty() {
+                    ui.add_space(8.0);
+                    ui.separator();
+                    ui.label(egui::RichText::new("Saved").strong());
+                    for inst in &self.saved_instances {
+                        ui.group(|ui| {
+                            ui.label(&inst.id);
+                            ui.label(inst.template.name());
+                        });
+                    }
+                }
+
                 if new_clicked {
                     self.wizard.open();
                 }
@@ -99,10 +151,8 @@ impl eframe::App for CustodexApp {
         });
 
         // Wizard overlay
-        if let Some(_config) = self.wizard.render(ctx) {
-            // TODO: use config to launch a new instance
-            let mut d = self.panels.dashboard.lock().unwrap();
-            d.push_log(None, "New instance created from wizard.".to_string());
+        if let Some(config) = self.wizard.render(ctx) {
+            self.add_instance(config);
         }
     }
 }

@@ -13,6 +13,10 @@ A bot template defines a category of bot behavior. It determines:
 
 Each template lives as a crate in `crates/bots/<template-name>/`.
 
+### Template competition
+
+We deliberately support many templates to create effective competition. Users can try different templates side by side, compare their behavior, and choose what works best for their use case. This drives quality — templates that work well get used, templates that don't get improved or replaced.
+
 Examples:
 - `code-agent` — full code agent with tool execution, file editing, approval flow
 - `simple-chat` — text conversation only, no tools

@@ -376,6 +376,8 @@ dependencies = [
  "code-agent",
  "dashboard",
  "eframe",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
