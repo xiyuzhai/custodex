@@ -64,7 +64,7 @@ pub struct InstanceInfo {
     pub last_activity: Instant,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ServiceStatus {
     Stopped,
     Starting,

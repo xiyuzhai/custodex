@@ -1,13 +1,31 @@
 use std::path::PathBuf;
 
-use all_bots::{SavedInstance, TemplateConfig, TemplateKind, WizardState, save_instances, load_instances};
-use dashboard::{DashboardConfig, gui::DashboardPanels, new_dashboard};
+use all_bots::WizardState;
+use custodex::state::AppState;
+use dashboard::{DashboardConfig, new_dashboard};
 use eframe::egui;
 
 fn main() {
     tracing_subscriber::fmt::init();
 
-    // Set up home directories
+    let (rt, dashboard, bot_launcher, custodex_dir) = setup();
+    let app_state = AppState::new(rt, dashboard, bot_launcher, custodex_dir);
+
+    let options = eframe::NativeOptions::default();
+    eframe::run_native(
+        "custodex",
+        options,
+        Box::new(move |_cc| Ok(Box::new(CustodexApp::new(app_state)) as Box<dyn eframe::App>)),
+    )
+    .expect("eframe failed");
+}
+
+fn setup() -> (
+    tokio::runtime::Runtime,
+    dashboard::SharedDashboard,
+    dashboard::gui::BotLauncher,
+    PathBuf,
+) {
     let home_root = PathBuf::from(".local/home");
     let custodex_dir = home_root.join(".custodex");
     std::fs::create_dir_all(&custodex_dir).expect("failed to create .custodex dir");
@@ -42,67 +60,19 @@ fn main() {
         Some(sandbox_exe),
     );
 
-    let panels = DashboardPanels::new(rt, dashboard, bot_launcher);
-
-    // Load saved instances
-    let saved = load_instances(&custodex_dir);
-
-    let options = eframe::NativeOptions::default();
-    eframe::run_native(
-        "custodex",
-        options,
-        Box::new(move |_cc| {
-            Ok(Box::new(CustodexApp::new(panels, saved, custodex_dir)) as Box<dyn eframe::App>)
-        }),
-    )
-    .expect("eframe failed");
+    (rt, dashboard, bot_launcher, custodex_dir)
 }
 
 struct CustodexApp {
-    panels: DashboardPanels,
+    state: AppState,
     wizard: WizardState,
-    saved_instances: Vec<SavedInstance>,
-    custodex_dir: PathBuf,
 }
 
 impl CustodexApp {
-    fn new(panels: DashboardPanels, saved_instances: Vec<SavedInstance>, custodex_dir: PathBuf) -> Self {
-        if !saved_instances.is_empty() {
-            let mut d = panels.dashboard.lock().unwrap();
-            d.push_log(
-                None,
-                format!("Restored {} saved instance(s).", saved_instances.len()),
-            );
-        }
+    fn new(state: AppState) -> Self {
         Self {
-            panels,
+            state,
             wizard: WizardState::default(),
-            saved_instances,
-            custodex_dir,
-        }
-    }
-
-    fn add_instance(&mut self, config: TemplateConfig) {
-        let template = match &config {
-            TemplateConfig::CodeAgent(_) => TemplateKind::CodeAgent,
-            TemplateConfig::SimpleChat(_) => TemplateKind::SimpleChat,
-            TemplateConfig::AutoApprove(_) => TemplateKind::AutoApprove,
-        };
-        let id = format!("{}-{}", template.name(), self.saved_instances.len());
-        let saved = SavedInstance {
-            id: id.clone(),
-            template,
-            config,
-        };
-        self.saved_instances.push(saved);
-
-        // Persist
-        if let Err(e) = save_instances(&self.custodex_dir, &self.saved_instances) {
-            let mut d = self.panels.dashboard.lock().unwrap();
-            d.push_log(None, format!("Failed to save instances: {e}"));
-        } else {
-            let mut d = self.panels.dashboard.lock().unwrap();
-            d.push_log(None, format!("Instance {id} created and saved."));
         }
     }
 }
@@ -111,31 +81,68 @@ impl eframe::App for CustodexApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         ctx.request_repaint_after(std::time::Duration::from_millis(200));
 
+        let status = self.state.get_service_status();
+        let (input_tokens, output_tokens) = self.state.get_token_usage();
+
         // Status bar
         egui::TopBottomPanel::top("status_bar").show(ctx, |ui| {
-            self.panels.render_status_bar(ui);
+            ui.horizontal(|ui| {
+                let (text, color) = match &status {
+                    dashboard::ServiceStatus::Stopped => ("Stopped", egui::Color32::GRAY),
+                    dashboard::ServiceStatus::Starting => ("Starting...", egui::Color32::YELLOW),
+                    dashboard::ServiceStatus::Running => ("Running", egui::Color32::GREEN),
+                    dashboard::ServiceStatus::Error(e) => {
+                        ui.label(egui::RichText::new(format!("Error: {e}")).color(egui::Color32::RED));
+                        ("Error", egui::Color32::RED)
+                    }
+                };
+                ui.label(egui::RichText::new(format!("Service: {text}")).color(color));
+                ui.separator();
+                match &status {
+                    dashboard::ServiceStatus::Stopped | dashboard::ServiceStatus::Error(_) => {
+                        if ui.button("Start").clicked() { self.state.start_bot(); }
+                    }
+                    _ => {
+                        if ui.button("Stop").clicked() { self.state.stop_bot(); }
+                    }
+                }
+                ui.separator();
+                ui.label(format!("Instances: {}", self.state.saved_instances.len()));
+                ui.separator();
+                ui.label(format!("Tokens: {} in / {} out", input_tokens, output_tokens));
+            });
         });
 
         // Left: instances
         egui::SidePanel::left("instances_panel")
             .default_width(250.0)
             .show(ctx, |ui| {
-                let new_clicked = self.panels.render_instances_panel(ui);
+                ui.heading("Instances");
+                ui.separator();
 
-                // Show saved instances
-                if !self.saved_instances.is_empty() {
-                    ui.add_space(8.0);
+                if self.state.log_filter_chat.is_some() {
+                    if ui.button("Show All").clicked() {
+                        self.state.set_log_filter_chat(None);
+                    }
                     ui.separator();
-                    ui.label(egui::RichText::new("Saved").strong());
-                    for inst in &self.saved_instances {
-                        ui.group(|ui| {
-                            ui.label(&inst.id);
+                }
+
+                if self.state.saved_instances.is_empty() {
+                    ui.label("No instances.");
+                } else {
+                    for inst in &self.state.saved_instances {
+                        let resp = ui.group(|ui| {
+                            ui.label(egui::RichText::new(&inst.id).strong());
                             ui.label(inst.template.name());
                         });
+                        if resp.response.clicked() {
+                            // TODO: filter by instance
+                        }
                     }
                 }
 
-                if new_clicked {
+                ui.add_space(8.0);
+                if ui.button("+ New Instance").clicked() {
                     self.wizard.open();
                 }
             });
@@ -144,17 +151,43 @@ impl eframe::App for CustodexApp {
         egui::SidePanel::right("config_panel")
             .default_width(250.0)
             .show(ctx, |ui| {
-                self.panels.render_config_panel(ui);
+                ui.heading("Configuration");
+                ui.separator();
+                let d = self.state.dashboard.lock().unwrap();
+                ui.label(format!("Token: {}", d.config.token_path));
+                ui.label(format!("Sandbox: {}", d.config.sandbox_exe));
+                ui.label(format!("Model: {}", if d.config.model.is_empty() { "(default)" } else { &d.config.model }));
             });
 
         // Center: event log
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.panels.render_event_log(ui);
+            ui.horizontal(|ui| {
+                ui.heading("Event Log");
+                ui.separator();
+                ui.label("Filter:");
+                ui.text_edit_singleline(&mut self.state.log_filter_text);
+                if ui.button("Clear").clicked() {
+                    let mut d = self.state.dashboard.lock().unwrap();
+                    d.log.clear();
+                }
+            });
+            ui.separator();
+
+            let entries = self.state.get_log_entries();
+            egui::ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .stick_to_bottom(true)
+                .show(ui, |ui| {
+                    for (chat_id, msg) in &entries {
+                        let chat_str = chat_id.map(|id| format!("[{id}]")).unwrap_or_default();
+                        ui.label(egui::RichText::new(format!("{chat_str:>14} {msg}")).monospace());
+                    }
+                });
         });
 
         // Wizard overlay
         if let Some(config) = self.wizard.render(ctx) {
-            self.add_instance(config);
+            self.state.add_instance(config);
         }
     }
 }
