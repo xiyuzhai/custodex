@@ -1,7 +1,9 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use codex_bridge::{EventMsg, InstanceManager};
+use std::path::PathBuf;
+
+use codex_bridge::{EventMsg, InstanceManager, InstanceManagerConfig};
 use dashboard::{SharedDashboard, ServiceStatus};
 use telegram_adapter::{TelegramAction, classify_event, send_or_edit_delta};
 use teloxide::prelude::*;
@@ -22,7 +24,7 @@ impl BotState {
     }
 }
 
-pub async fn run_bot(token: String, dashboard: SharedDashboard) {
+pub async fn run_bot(token: String, dashboard: SharedDashboard, work_dir: PathBuf, custodex_dir: PathBuf, sandbox_exe: Option<PathBuf>) {
     let bot = Bot::new(&token);
 
     let me: Me = match bot.get_me().await {
@@ -41,7 +43,11 @@ pub async fn run_bot(token: String, dashboard: SharedDashboard) {
         d.push_log(None, format!("Bot started: @{}", me.username()));
     }
 
-    let instance_mgr = Arc::new(InstanceManager::new().await);
+    let instance_mgr = Arc::new(InstanceManager::new(InstanceManagerConfig {
+        work_dir,
+        sandbox_exe,
+        custodex_dir,
+    }).await);
     let state = Arc::new(BotState {
         instance_mgr,
         dashboard: dashboard.clone(),

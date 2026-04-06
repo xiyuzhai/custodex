@@ -5,13 +5,12 @@ use eframe::egui;
 
 use crate::{ServiceStatus, SharedDashboard};
 
-/// Function type for launching the bot. Takes a token and dashboard, returns a future.
+/// Function type for launching the bot. Caller captures all needed state in the closure.
 pub type BotLauncher =
-    Box<dyn Fn(String, SharedDashboard) -> std::pin::Pin<Box<dyn Future<Output = ()> + Send>> + Send>;
+    Box<dyn Fn() -> std::pin::Pin<Box<dyn Future<Output = ()> + Send>> + Send>;
 
 pub struct ControlPanel {
     rt: tokio::runtime::Runtime,
-    token: String,
     dashboard: SharedDashboard,
     bot_launcher: BotLauncher,
     bot_handle: Option<tokio::task::JoinHandle<()>>,
@@ -22,13 +21,11 @@ pub struct ControlPanel {
 impl ControlPanel {
     pub fn new(
         rt: tokio::runtime::Runtime,
-        token: String,
         dashboard: SharedDashboard,
         bot_launcher: BotLauncher,
     ) -> Self {
         Self {
             rt,
-            token,
             dashboard,
             bot_launcher,
             bot_handle: None,
@@ -46,7 +43,7 @@ impl ControlPanel {
             d.service_status = ServiceStatus::Starting;
             d.push_log(None, "Starting bot...".to_string());
         }
-        let fut = (self.bot_launcher)(self.token.clone(), self.dashboard.clone());
+        let fut = (self.bot_launcher)();
         self.bot_handle = Some(self.rt.spawn(fut));
     }
 

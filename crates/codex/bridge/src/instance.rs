@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use codex_core::config::{Config, ConfigOverrides};
@@ -13,6 +14,16 @@ use codex_protocol::user_input::UserInput;
 use dashmap::DashMap;
 use tokio::sync::Mutex;
 
+/// Configuration for creating an InstanceManager.
+pub struct InstanceManagerConfig {
+    /// Working directory for bot instances.
+    pub work_dir: PathBuf,
+    /// Path to the codex-linux-sandbox binary.
+    pub sandbox_exe: Option<PathBuf>,
+    /// Persistent state directory (.custodex/).
+    pub custodex_dir: PathBuf,
+}
+
 /// A single bot instance bound to a chat. Wraps a CodexThread.
 pub struct BotInstance {
     pub thread: Arc<CodexThread>,
@@ -22,14 +33,14 @@ pub struct BotInstance {
 pub struct InstanceManager {
     thread_mgr: Arc<ThreadManager>,
     instances: DashMap<i64, Arc<Mutex<BotInstance>>>,
+    work_dir: PathBuf,
 }
 
 impl InstanceManager {
-    pub async fn new() -> Self {
-        let sandbox_exe = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../codex/codex-rs/target/release/codex-linux-sandbox");
+    pub async fn new(im_config: InstanceManagerConfig) -> Self {
         let overrides = ConfigOverrides {
-            codex_linux_sandbox_exe: Some(sandbox_exe),
+            codex_linux_sandbox_exe: im_config.sandbox_exe,
+            cwd: Some(im_config.work_dir.clone()),
             ..Default::default()
         };
         let config = Config::load_with_cli_overrides_and_harness_overrides(vec![], overrides)
@@ -57,7 +68,13 @@ impl InstanceManager {
         Self {
             thread_mgr,
             instances: DashMap::new(),
+            work_dir: im_config.work_dir,
         }
+    }
+
+    /// The working directory for this manager's instances.
+    pub fn work_dir(&self) -> &PathBuf {
+        &self.work_dir
     }
 
     /// Get or create a bot instance for the given chat ID.

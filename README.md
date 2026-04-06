@@ -1,46 +1,37 @@
-# codex-telegram
-Telegram binding for codex
+# custodex
 
-## Architecture
+Customizable codex agent runtime delivered over Telegram.
 
-`cargo run` launches a single process with two subsystems:
+## Quick start
 
-1. **eframe/egui control panel** — runs on the main thread (egui requirement). Provides debugging, monitoring, and configuration. NOT for interacting with the bot as a user.
-2. **Telegram bot** — runs on background tokio tasks. Handles all Telegram message/callback dispatching.
+```
+make sandbox   # build the Landlock sandbox binary (first time only)
+make run       # launch the dashboard + bot
+```
 
-Communication between GUI and bot via channels.
+See [docs/guides/deployment.md](docs/guides/deployment.md) for full setup instructions.
 
-## Control Panel (egui)
+## Documentation
 
-Purpose: debugging/monitoring/configuration only.
+- [Concepts](docs/concepts.md) — core abstractions (bot template, channel, bridge, dashboard)
+- Architecture — [overview](docs/architecture/overview.md), [workspace](docs/architecture/workspace.md), [events](docs/architecture/events.md)
+- Guides — [deployment](docs/guides/deployment.md), [creating a bot template](docs/guides/creating-a-bot-template.md), [codex integration](docs/guides/codex-integration.md)
+- Design — [dashboard layout](docs/design/ui/layout.md), [new instance wizard](docs/design/ui/new_instance.md), [channels](docs/design/channels.md)
 
-Panels:
-- **Bot status** — running/stopped, start/stop button, connection state
-- **Active instances** — table of chat IDs, message counts, last activity
-- **Event log** — live stream of all EventMsg from all instances (scrollable, filterable)
-- **Token usage** — per-instance and total token counts, cost estimate
-- **Configuration** — token file path, sandbox exe path, model, editable settings
+## Workspace layout
 
-The GUI does NOT handle approvals — those stay on Telegram inline keyboards only.
-
-## Token storage
-
-Bot token stored in `.local/telegram_bot_token` (gitignored). App takes optional file path as first CLI arg, defaults to `.local/telegram_bot_token`.
-
-## Dependencies on codex
-
-Path deps to `../codex/codex-rs/`:
-- `codex-core` — embedded agent runtime (ThreadManager, CodexThread)
-- `codex-protocol` — Event/EventMsg types, Op, ReviewDecision
-- `codex-login` — AuthManager, token storage
-- `codex-exec-server` — EnvironmentManager
-- `codex-models-manager` — CollaborationModesConfig
-
-Sandbox binary: `../codex/codex-rs/target/release/codex-linux-sandbox`
+```
+crates/
+├── codex/bridge/              # wraps codex-core, re-exports types
+├── llm/core/                  # LLM abstractions (grow when needed)
+├── channels/telegram-adapter/ # EventMsg → Telegram actions
+├── ui/dashboard/              # egui control panel
+└── bots/code-agent/           # full code agent bot template
+```
 
 ## Dev notes
 
-- Don't skip `AgentMessage` display — deltas already cover streaming text, `AgentMessage` is the final duplicate
+- `AgentMessage` skipped in adapter — deltas already cover streaming text
 - Telegram message edit throttle: 500ms to avoid rate limits
 - `ConfigOverrides` used to pass sandbox exe path
 - `[patch.crates-io]` needed for tokio-tungstenite fork (proxy feature)
