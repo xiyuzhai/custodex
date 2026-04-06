@@ -17,6 +17,8 @@ pub struct DashboardPanels {
     pub bot_handle: Option<tokio::task::JoinHandle<()>>,
     pub startup_time: Instant,
     pub log_auto_scroll: bool,
+    pub log_filter_chat: Option<i64>,
+    pub log_filter_text: String,
 }
 
 impl DashboardPanels {
@@ -32,6 +34,8 @@ impl DashboardPanels {
             bot_handle: None,
             startup_time: Instant::now(),
             log_auto_scroll: true,
+            log_filter_chat: None,
+            log_filter_text: String::new(),
         }
     }
 
@@ -100,7 +104,7 @@ impl DashboardPanels {
     }
 
     /// Render the instances panel. Returns true if "+ New" was clicked.
-    pub fn render_instances_panel(&self, ui: &mut egui::Ui) -> bool {
+    pub fn render_instances_panel(&mut self, ui: &mut egui::Ui) -> bool {
         let d = self.dashboard.lock().unwrap();
         let instances: Vec<_> = d
             .instances
@@ -112,17 +116,39 @@ impl DashboardPanels {
         ui.heading("Instances");
         ui.separator();
 
+        // "All" button to clear filter
+        if self.log_filter_chat.is_some() {
+            if ui.button("Show All").clicked() {
+                self.log_filter_chat = None;
+            }
+            ui.separator();
+        }
+
         if instances.is_empty() {
             ui.label("No active instances.");
         } else {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 for (chat_id, msg_count, last_activity) in &instances {
                     let ago = last_activity.elapsed().as_secs();
-                    ui.group(|ui| {
-                        ui.label(egui::RichText::new(format!("Chat {chat_id}")).strong());
+                    let is_selected = self.log_filter_chat == Some(*chat_id);
+                    let resp = ui.group(|ui| {
+                        let label = egui::RichText::new(format!("Chat {chat_id}")).strong();
+                        let label = if is_selected {
+                            label.color(egui::Color32::LIGHT_BLUE)
+                        } else {
+                            label
+                        };
+                        ui.label(label);
                         ui.label(format!("Messages: {msg_count}"));
                         ui.label(format!("Last: {ago}s ago"));
                     });
+                    if resp.response.clicked() {
+                        self.log_filter_chat = if is_selected {
+                            None
+                        } else {
+                            Some(*chat_id)
+                        };
+                    }
                 }
             });
         }
@@ -165,9 +191,22 @@ impl DashboardPanels {
 
     pub fn render_event_log(&mut self, ui: &mut egui::Ui) {
         let d = self.dashboard.lock().unwrap();
+        let filter_chat = self.log_filter_chat;
+        let filter_text = &self.log_filter_text;
         let log_entries: Vec<_> = d
             .log
             .iter()
+            .filter(|e| {
+                if let Some(fc) = filter_chat {
+                    if e.chat_id != Some(fc) {
+                        return false;
+                    }
+                }
+                if !filter_text.is_empty() && !e.message.contains(filter_text.as_str()) {
+                    return false;
+                }
+                true
+            })
             .map(|e| {
                 (
                     e.timestamp.duration_since(self.startup_time).as_secs_f64(),
@@ -182,6 +221,12 @@ impl DashboardPanels {
             ui.heading("Event Log");
             ui.separator();
             ui.checkbox(&mut self.log_auto_scroll, "Auto-scroll");
+            ui.separator();
+            ui.label("Filter:");
+            ui.add(egui::TextEdit::singleline(&mut self.log_filter_text).desired_width(120.0));
+            if let Some(fc) = filter_chat {
+                ui.label(format!("[Chat {fc}]"));
+            }
             if ui.button("Clear").clicked() {
                 let mut d = self.dashboard.lock().unwrap();
                 d.log.clear();
