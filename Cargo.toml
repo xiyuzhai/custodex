@@ -6,6 +6,7 @@ members = [
     "crates/channels/telegram-adapter",
     "crates/ui/dashboard",
     "crates/bots/code-agent",
+    "crates/bots/all-bots",
 ]
 resolver = "2"
 
@@ -20,6 +21,7 @@ llm-core = { path = "crates/llm/core" }
 telegram-adapter = { path = "crates/channels/telegram-adapter" }
 dashboard = { path = "crates/ui/dashboard" }
 code-agent = { path = "crates/bots/code-agent" }
+all-bots = { path = "crates/bots/all-bots" }
 
 # Codex deps
 codex-core = { path = "../codex/codex-rs/core" }

@@ -370,6 +370,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "all-bots"
+version = "0.1.0"
+dependencies = [
+ "code-agent",
+ "dashboard",
+ "eframe",
+]
+
+[[package]]
 name = "allocative"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2815,6 +2824,7 @@ dependencies = [
 name = "custodex"
 version = "0.1.0"
 dependencies = [
+ "all-bots",
  "code-agent",
  "dashboard",
  "eframe",

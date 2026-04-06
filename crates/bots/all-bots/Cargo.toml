@@ -1,12 +1,9 @@
 [package]
-name = "custodex"
+name = "all-bots"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
-all-bots.workspace = true
 code-agent.workspace = true
 dashboard.workspace = true
 eframe.workspace = true
-tokio.workspace = true
-tracing-subscriber.workspace = true
