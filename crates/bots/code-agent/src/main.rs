@@ -1,10 +1,6 @@
-mod adapter;
 mod bot;
-mod gui;
-mod monitor;
-mod session;
 
-use monitor::{MonitorConfig, new_shared_monitor};
+use dashboard::{DashboardConfig, new_dashboard};
 
 fn main() {
     tracing_subscriber::fmt::init();
@@ -17,23 +13,28 @@ fn main() {
         .trim()
         .to_string();
 
-    let sandbox_exe = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../codex/codex-rs/target/release/codex-linux-sandbox");
-
-    let monitor = new_shared_monitor(MonitorConfig {
+    let dashboard = new_dashboard(DashboardConfig {
         token_path: token_path.clone(),
-        sandbox_exe: sandbox_exe.display().to_string(),
-        model: String::new(), // will be filled from config later
+        sandbox_exe: String::new(),
+        model: String::new(),
     });
 
     let rt = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
 
+    let bot_launcher: dashboard::gui::BotLauncher =
+        Box::new(|token, dash| Box::pin(bot::run_bot(token, dash)));
+
     let options = eframe::NativeOptions::default();
     eframe::run_native(
-        "codex-telegram",
+        "codex-telegram: code-agent",
         options,
         Box::new(move |_cc| {
-            Ok(Box::new(gui::ControlPanel::new(rt, token, monitor)) as Box<dyn eframe::App>)
+            Ok(Box::new(dashboard::gui::ControlPanel::new(
+                rt,
+                token,
+                dashboard,
+                bot_launcher,
+            )) as Box<dyn eframe::App>)
         }),
     )
     .expect("eframe failed");

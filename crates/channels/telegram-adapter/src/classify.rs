@@ -1,4 +1,4 @@
-use codex_protocol::protocol::EventMsg;
+use codex_bridge::EventMsg;
 
 /// Categorized adapter output for the event loop to handle differently.
 pub enum TelegramAction {
@@ -29,7 +29,6 @@ pub fn classify_event(event: &EventMsg) -> TelegramAction {
         EventMsg::AgentMessageDelta(delta) => TelegramAction::Delta(delta.delta.clone()),
 
         // AgentMessage is the final complete message — skip it since deltas already cover it.
-        // If no deltas were received (delta_buf empty), the turn-end flush handles it.
         EventMsg::AgentMessage(_) => TelegramAction::Skip,
 
         EventMsg::Error(err) => TelegramAction::Send(format!("Error: {}", err.message)),
@@ -60,7 +59,11 @@ pub fn classify_event(event: &EventMsg) -> TelegramAction {
         }
 
         EventMsg::ExecApprovalRequest(req) => TelegramAction::ApprovalPrompt(ApprovalInfo {
-            text: format!("Approve command?\n`{}`\nin {}", req.command.join(" "), req.cwd.display()),
+            text: format!(
+                "Approve command?\n`{}`\nin {}",
+                req.command.join(" "),
+                req.cwd.display()
+            ),
             call_id: req.call_id.clone(),
             turn_id: req.turn_id.clone(),
             kind: ApprovalKind::Exec,

@@ -1,0 +1,8 @@
+[package]
+name = "dashboard"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+eframe.workspace = true
+tokio.workspace = true

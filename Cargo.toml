@@ -1,15 +1,32 @@
-[package]
-name = "codex-telegram"
+[workspace]
+members = [
+    "crates/codex/bridge",
+    "crates/llm/core",
+    "crates/channels/telegram-adapter",
+    "crates/ui/dashboard",
+    "crates/bots/code-agent",
+]
+resolver = "2"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
+[workspace.dependencies]
+# Internal crates
+codex-bridge = { path = "crates/codex/bridge" }
+llm-core = { path = "crates/llm/core" }
+telegram-adapter = { path = "crates/channels/telegram-adapter" }
+dashboard = { path = "crates/ui/dashboard" }
+
+# Codex deps
 codex-core = { path = "../codex/codex-rs/core" }
 codex-protocol = { path = "../codex/codex-rs/protocol" }
 codex-login = { path = "../codex/codex-rs/login" }
 codex-exec-server = { path = "../codex/codex-rs/exec-server" }
 codex-models-manager = { path = "../codex/codex-rs/models-manager" }
 
+# External deps
 teloxide = { version = "0.13", features = ["macros"] }
 tokio = { version = "1", features = ["full"] }
 eframe = "0.30"

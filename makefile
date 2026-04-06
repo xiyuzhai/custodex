@@ -1,7 +1,7 @@
 .PHONY: run build sandbox
 
 run: build
-	cargo run
+	cargo run -p code-agent
 
 build:
 	cargo build

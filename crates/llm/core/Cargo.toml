@@ -1,0 +1,4 @@
+[package]
+name = "llm-core"
+version.workspace = true
+edition.workspace = true

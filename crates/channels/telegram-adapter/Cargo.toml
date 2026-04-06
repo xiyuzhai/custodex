@@ -1,0 +1,9 @@
+[package]
+name = "telegram-adapter"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+codex-bridge.workspace = true
+teloxide.workspace = true
+tracing.workspace = true

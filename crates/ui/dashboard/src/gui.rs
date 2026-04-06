@@ -1,24 +1,36 @@
+use std::future::Future;
 use std::time::Instant;
 
 use eframe::egui;
 
-use crate::monitor::{BotStatus, SharedMonitor};
+use crate::{ServiceStatus, SharedDashboard};
+
+/// Function type for launching the bot. Takes a token and dashboard, returns a future.
+pub type BotLauncher =
+    Box<dyn Fn(String, SharedDashboard) -> std::pin::Pin<Box<dyn Future<Output = ()> + Send>> + Send>;
 
 pub struct ControlPanel {
     rt: tokio::runtime::Runtime,
     token: String,
-    monitor: SharedMonitor,
+    dashboard: SharedDashboard,
+    bot_launcher: BotLauncher,
     bot_handle: Option<tokio::task::JoinHandle<()>>,
     startup_time: Instant,
     log_auto_scroll: bool,
 }
 
 impl ControlPanel {
-    pub fn new(rt: tokio::runtime::Runtime, token: String, monitor: SharedMonitor) -> Self {
+    pub fn new(
+        rt: tokio::runtime::Runtime,
+        token: String,
+        dashboard: SharedDashboard,
+        bot_launcher: BotLauncher,
+    ) -> Self {
         Self {
             rt,
             token,
-            monitor,
+            dashboard,
+            bot_launcher,
             bot_handle: None,
             startup_time: Instant::now(),
             log_auto_scroll: true,
@@ -30,41 +42,39 @@ impl ControlPanel {
             return;
         }
         {
-            let mut m = self.monitor.lock().unwrap();
-            m.bot_status = BotStatus::Starting;
-            m.push_log(None, "Starting bot...".to_string());
+            let mut d = self.dashboard.lock().unwrap();
+            d.service_status = ServiceStatus::Starting;
+            d.push_log(None, "Starting bot...".to_string());
         }
-        let token = self.token.clone();
-        let monitor = self.monitor.clone();
-        self.bot_handle = Some(self.rt.spawn(crate::bot::run_bot(token, monitor)));
+        let fut = (self.bot_launcher)(self.token.clone(), self.dashboard.clone());
+        self.bot_handle = Some(self.rt.spawn(fut));
     }
 
     fn stop_bot(&mut self) {
         if let Some(handle) = self.bot_handle.take() {
             handle.abort();
-            let mut m = self.monitor.lock().unwrap();
-            m.bot_status = BotStatus::Stopped;
-            m.push_log(None, "Bot stopped by user.".to_string());
+            let mut d = self.dashboard.lock().unwrap();
+            d.service_status = ServiceStatus::Stopped;
+            d.push_log(None, "Bot stopped by user.".to_string());
         }
     }
 }
 
 impl eframe::App for ControlPanel {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Request repaint every 200ms so we see live updates
         ctx.request_repaint_after(std::time::Duration::from_millis(200));
 
-        let m = self.monitor.lock().unwrap();
-        let bot_status = m.bot_status.clone();
-        let input_tokens = m.input_tokens;
-        let output_tokens = m.output_tokens;
-        let session_count = m.sessions.len();
-        let sessions: Vec<_> = m
-            .sessions
+        let d = self.dashboard.lock().unwrap();
+        let service_status = d.service_status.clone();
+        let input_tokens = d.input_tokens;
+        let output_tokens = d.output_tokens;
+        let instance_count = d.instances.len();
+        let instances: Vec<_> = d
+            .instances
             .values()
             .map(|s| (s.chat_id, s.message_count, s.last_activity))
             .collect();
-        let log_entries: Vec<_> = m
+        let log_entries: Vec<_> = d
             .log
             .iter()
             .map(|e| {
@@ -75,19 +85,18 @@ impl eframe::App for ControlPanel {
                 )
             })
             .collect();
-        let config_token_path = m.config.token_path.clone();
-        let config_sandbox = m.config.sandbox_exe.clone();
-        let config_model = m.config.model.clone();
-        drop(m);
+        let config_token_path = d.config.token_path.clone();
+        let config_sandbox = d.config.sandbox_exe.clone();
+        let config_model = d.config.model.clone();
+        drop(d);
 
-        // Top panel: status bar
         egui::TopBottomPanel::top("status_bar").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                let (status_text, status_color) = match &bot_status {
-                    BotStatus::Stopped => ("Stopped", egui::Color32::GRAY),
-                    BotStatus::Starting => ("Starting...", egui::Color32::YELLOW),
-                    BotStatus::Running => ("Running", egui::Color32::GREEN),
-                    BotStatus::Error(e) => {
+                let (status_text, status_color) = match &service_status {
+                    ServiceStatus::Stopped => ("Stopped", egui::Color32::GRAY),
+                    ServiceStatus::Starting => ("Starting...", egui::Color32::YELLOW),
+                    ServiceStatus::Running => ("Running", egui::Color32::GREEN),
+                    ServiceStatus::Error(e) => {
                         ui.label(
                             egui::RichText::new(format!("Error: {e}"))
                                 .color(egui::Color32::RED),
@@ -95,17 +104,19 @@ impl eframe::App for ControlPanel {
                         ("Error", egui::Color32::RED)
                     }
                 };
-                ui.label(egui::RichText::new(format!("Bot: {status_text}")).color(status_color));
+                ui.label(
+                    egui::RichText::new(format!("Service: {status_text}")).color(status_color),
+                );
 
                 ui.separator();
 
-                match &bot_status {
-                    BotStatus::Stopped | BotStatus::Error(_) => {
+                match &service_status {
+                    ServiceStatus::Stopped | ServiceStatus::Error(_) => {
                         if ui.button("Start").clicked() {
                             self.start_bot();
                         }
                     }
-                    BotStatus::Running | BotStatus::Starting => {
+                    ServiceStatus::Running | ServiceStatus::Starting => {
                         if ui.button("Stop").clicked() {
                             self.stop_bot();
                         }
@@ -113,7 +124,7 @@ impl eframe::App for ControlPanel {
                 }
 
                 ui.separator();
-                ui.label(format!("Sessions: {session_count}"));
+                ui.label(format!("Instances: {instance_count}"));
                 ui.separator();
                 ui.label(format!(
                     "Tokens: {} in / {} out",
@@ -122,18 +133,17 @@ impl eframe::App for ControlPanel {
             });
         });
 
-        // Left panel: sessions
-        egui::SidePanel::left("sessions_panel")
+        egui::SidePanel::left("instances_panel")
             .default_width(250.0)
             .show(ctx, |ui| {
-                ui.heading("Sessions");
+                ui.heading("Instances");
                 ui.separator();
 
-                if sessions.is_empty() {
-                    ui.label("No active sessions.");
+                if instances.is_empty() {
+                    ui.label("No active instances.");
                 } else {
                     egui::ScrollArea::vertical().show(ui, |ui| {
-                        for (chat_id, msg_count, last_activity) in &sessions {
+                        for (chat_id, msg_count, last_activity) in &instances {
                             let ago = last_activity.elapsed().as_secs();
                             ui.group(|ui| {
                                 ui.label(
@@ -147,7 +157,6 @@ impl eframe::App for ControlPanel {
                 }
             });
 
-        // Right panel: config
         egui::SidePanel::right("config_panel")
             .default_width(250.0)
             .show(ctx, |ui| {
@@ -176,15 +185,14 @@ impl eframe::App for ControlPanel {
                     });
             });
 
-        // Central panel: event log
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.heading("Event Log");
                 ui.separator();
                 ui.checkbox(&mut self.log_auto_scroll, "Auto-scroll");
                 if ui.button("Clear").clicked() {
-                    let mut m = self.monitor.lock().unwrap();
-                    m.log.clear();
+                    let mut d = self.dashboard.lock().unwrap();
+                    d.log.clear();
                 }
             });
             ui.separator();

@@ -3,27 +3,27 @@ use std::time::Instant;
 
 const MAX_LOG_ENTRIES: usize = 2000;
 
-pub type SharedMonitor = std::sync::Arc<std::sync::Mutex<MonitorState>>;
+pub type SharedDashboard = std::sync::Arc<std::sync::Mutex<Dashboard>>;
 
-pub fn new_shared_monitor(config: MonitorConfig) -> SharedMonitor {
-    std::sync::Arc::new(std::sync::Mutex::new(MonitorState::new(config)))
+pub fn new_dashboard(config: DashboardConfig) -> SharedDashboard {
+    std::sync::Arc::new(std::sync::Mutex::new(Dashboard::new(config)))
 }
 
-pub struct MonitorState {
+pub struct Dashboard {
     pub log: VecDeque<LogEntry>,
-    pub sessions: HashMap<i64, SessionInfo>,
-    pub bot_status: BotStatus,
+    pub instances: HashMap<i64, InstanceInfo>,
+    pub service_status: ServiceStatus,
     pub input_tokens: u64,
     pub output_tokens: u64,
-    pub config: MonitorConfig,
+    pub config: DashboardConfig,
 }
 
-impl MonitorState {
-    fn new(config: MonitorConfig) -> Self {
+impl Dashboard {
+    fn new(config: DashboardConfig) -> Self {
         Self {
             log: VecDeque::new(),
-            sessions: HashMap::new(),
-            bot_status: BotStatus::Stopped,
+            instances: HashMap::new(),
+            service_status: ServiceStatus::Stopped,
             input_tokens: 0,
             output_tokens: 0,
             config,
@@ -41,8 +41,8 @@ impl MonitorState {
         }
     }
 
-    pub fn update_session_activity(&mut self, chat_id: i64) {
-        let info = self.sessions.entry(chat_id).or_insert(SessionInfo {
+    pub fn update_instance_activity(&mut self, chat_id: i64) {
+        let info = self.instances.entry(chat_id).or_insert(InstanceInfo {
             chat_id,
             message_count: 0,
             last_activity: Instant::now(),
@@ -58,21 +58,21 @@ pub struct LogEntry {
     pub message: String,
 }
 
-pub struct SessionInfo {
+pub struct InstanceInfo {
     pub chat_id: i64,
     pub message_count: u32,
     pub last_activity: Instant,
 }
 
 #[derive(Clone, PartialEq)]
-pub enum BotStatus {
+pub enum ServiceStatus {
     Stopped,
     Starting,
     Running,
     Error(String),
 }
 
-pub struct MonitorConfig {
+pub struct DashboardConfig {
     pub token_path: String,
     pub sandbox_exe: String,
     pub model: String,

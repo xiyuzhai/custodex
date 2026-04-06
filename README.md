@@ -16,9 +16,9 @@ Purpose: debugging/monitoring/configuration only.
 
 Panels:
 - **Bot status** — running/stopped, start/stop button, connection state
-- **Active sessions** — table of chat IDs, message counts, last activity
-- **Event log** — live stream of all EventMsg from all sessions (scrollable, filterable)
-- **Token usage** — per-session and total token counts, cost estimate
+- **Active instances** — table of chat IDs, message counts, last activity
+- **Event log** — live stream of all EventMsg from all instances (scrollable, filterable)
+- **Token usage** — per-instance and total token counts, cost estimate
 - **Configuration** — token file path, sandbox exe path, model, editable settings
 
 The GUI does NOT handle approvals — those stay on Telegram inline keyboards only.

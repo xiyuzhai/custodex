@@ -1505,6 +1505,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e9b18233253483ce2f65329a24072ec414db782531bdbb7d0bbc4bd2ce6b7e21"
 
 [[package]]
+name = "code-agent"
+version = "0.1.0"
+dependencies = [
+ "codex-bridge",
+ "dashboard",
+ "eframe",
+ "telegram-adapter",
+ "teloxide",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1598,6 +1612,21 @@ dependencies = [
  "async-trait",
  "tokio",
  "tokio-util",
+]
+
+[[package]]
+name = "codex-bridge"
+version = "0.1.0"
+dependencies = [
+ "codex-core",
+ "codex-exec-server",
+ "codex-login",
+ "codex-models-manager",
+ "codex-protocol",
+ "dashmap",
+ "llm-core",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -2299,23 +2328,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "codex-telegram"
-version = "0.1.0"
-dependencies = [
- "codex-core",
- "codex-exec-server",
- "codex-login",
- "codex-models-manager",
- "codex-protocol",
- "dashmap",
- "eframe",
- "teloxide",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "codex-terminal-detection"
 version = "0.0.0"
 dependencies = [
@@ -2938,6 +2950,14 @@ dependencies = [
  "darling_core 0.23.0",
  "quote",
  "syn 2.0.114",
+]
+
+[[package]]
+name = "dashboard"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "tokio",
 ]
 
 [[package]]
@@ -5567,6 +5587,10 @@ name = "litrs"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11d3d7f243d5c5a8b9bb5d6dd2b1602c0cb0b9db1621bafc7ed66e35ff9fe092"
+
+[[package]]
+name = "llm-core"
+version = "0.1.0"
 
 [[package]]
 name = "local-waker"
@@ -9715,6 +9739,15 @@ name = "takecell"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20f34339676cdcab560c9a82300c4c2581f68b9369aedf0fae86f2ff9565ff3e"
+
+[[package]]
+name = "telegram-adapter"
+version = "0.1.0"
+dependencies = [
+ "codex-bridge",
+ "teloxide",
+ "tracing",
+]
 
 [[package]]
 name = "teloxide"
