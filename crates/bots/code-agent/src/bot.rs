@@ -1,20 +1,29 @@
+use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use std::path::PathBuf;
-
-use codex_bridge::{EventMsg, InstanceManager, InstanceManagerConfig};
-use dashboard::{SharedDashboard, ServiceStatus};
-use telegram_adapter::{TelegramAction, classify_event, send_or_edit_delta};
+use codex_bridge::{EventMsg, InstanceManager, InstanceManagerConfig, Op, ReviewDecision};
+use dashboard::{ServiceStatus, SharedDashboard};
+use telegram_adapter::{ApprovalKind, TelegramAction, classify_event, send_or_edit_delta};
 use teloxide::prelude::*;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, Me, MessageId, ParseMode};
+use tokio::sync::Mutex;
 
 /// Minimum interval between Telegram message edits to avoid rate limits.
 const EDIT_INTERVAL_MS: u128 = 500;
 
+struct PendingApproval {
+    call_id: String,
+    turn_id: String,
+    kind: ApprovalKind,
+    thread: Arc<codex_bridge::CodexThread>,
+}
+
 struct BotState {
     instance_mgr: Arc<InstanceManager>,
     dashboard: SharedDashboard,
+    pending_approvals: Mutex<HashMap<i64, PendingApproval>>,
 }
 
 impl BotState {
@@ -24,7 +33,13 @@ impl BotState {
     }
 }
 
-pub async fn run_bot(token: String, dashboard: SharedDashboard, work_dir: PathBuf, custodex_dir: PathBuf, sandbox_exe: Option<PathBuf>) {
+pub async fn run_bot(
+    token: String,
+    dashboard: SharedDashboard,
+    work_dir: PathBuf,
+    custodex_dir: PathBuf,
+    sandbox_exe: Option<PathBuf>,
+) {
     let bot = Bot::new(&token);
 
     let me: Me = match bot.get_me().await {
@@ -43,14 +58,18 @@ pub async fn run_bot(token: String, dashboard: SharedDashboard, work_dir: PathBu
         d.push_log(None, format!("Bot started: @{}", me.username()));
     }
 
-    let instance_mgr = Arc::new(InstanceManager::new(InstanceManagerConfig {
-        work_dir,
-        sandbox_exe,
-        custodex_dir,
-    }).await);
+    let instance_mgr = Arc::new(
+        InstanceManager::new(InstanceManagerConfig {
+            work_dir,
+            sandbox_exe,
+            custodex_dir,
+        })
+        .await,
+    );
     let state = Arc::new(BotState {
         instance_mgr,
         dashboard: dashboard.clone(),
+        pending_approvals: Mutex::new(HashMap::new()),
     });
 
     let handler = dptree::entry()
@@ -70,11 +89,7 @@ pub async fn run_bot(token: String, dashboard: SharedDashboard, work_dir: PathBu
     }
 }
 
-async fn handle_message(
-    bot: Bot,
-    msg: Message,
-    state: Arc<BotState>,
-) -> ResponseResult<()> {
+async fn handle_message(bot: Bot, msg: Message, state: Arc<BotState>) -> ResponseResult<()> {
     let Some(text) = msg.text() else {
         return Ok(());
     };
@@ -93,11 +108,7 @@ async fn handle_message(
     Ok(())
 }
 
-async fn handle_callback(
-    bot: Bot,
-    q: CallbackQuery,
-    state: Arc<BotState>,
-) -> ResponseResult<()> {
+async fn handle_callback(bot: Bot, q: CallbackQuery, state: Arc<BotState>) -> ResponseResult<()> {
     let Some(data) = q.data.as_deref() else {
         return Ok(());
     };
@@ -106,9 +117,49 @@ async fn handle_callback(
     };
 
     let chat_id = msg.chat().id;
-    // For now, callbacks are acknowledged but approval state management
-    // needs to be integrated with the instance manager.
-    // TODO: wire up pending approval tracking
+    let cid = chat_id.0;
+
+    let approval = {
+        let mut pending = state.pending_approvals.lock().await;
+        pending.remove(&cid)
+    };
+
+    let Some(approval) = approval else {
+        state.log(Some(cid), "Callback with no pending approval.".to_string());
+        return Ok(());
+    };
+
+    let decision = match data {
+        "approve" => ReviewDecision::Approved,
+        "approve_session" => ReviewDecision::ApprovedForSession,
+        _ => ReviewDecision::Denied,
+    };
+
+    state.log(
+        Some(cid),
+        format!("Approval: {data} for {}", approval.call_id),
+    );
+
+    let op = match approval.kind {
+        ApprovalKind::Exec => Op::ExecApproval {
+            id: approval.call_id,
+            turn_id: Some(approval.turn_id),
+            decision,
+        },
+        ApprovalKind::Patch => Op::PatchApproval {
+            id: approval.call_id,
+            decision,
+        },
+    };
+
+    if let Err(e) = state.instance_mgr.submit_approval(cid, op).await {
+        tracing::error!("failed to submit approval: {e}");
+        bot.send_message(chat_id, format!("Failed to submit approval: {e}"))
+            .await
+            .ok();
+        return Ok(());
+    }
+
     bot.send_message(
         chat_id,
         match data {
@@ -119,7 +170,8 @@ async fn handle_callback(
     .await
     .ok();
 
-    state.log(Some(chat_id.0), format!("Callback: {data}"));
+    // Resume draining events after approval
+    drain_events(&bot, chat_id, &approval.thread, &state).await;
     Ok(())
 }
 
@@ -206,7 +258,24 @@ async fn drain_events(
                     .await
                     .ok();
 
-                // TODO: store pending approval and resume after callback
+                // Store pending approval — handle_callback will resume
+                let inst = state.instance_mgr.get_or_create(cid).await;
+                let thread_arc = {
+                    let i = inst.lock().await;
+                    Arc::clone(&i.thread)
+                };
+                {
+                    let mut pending = state.pending_approvals.lock().await;
+                    pending.insert(
+                        cid,
+                        PendingApproval {
+                            call_id: info.call_id,
+                            turn_id: info.turn_id,
+                            kind: info.kind,
+                            thread: thread_arc,
+                        },
+                    );
+                }
                 return;
             }
             TelegramAction::Skip => {}

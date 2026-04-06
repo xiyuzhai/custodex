@@ -1,7 +1,7 @@
 .PHONY: run build sandbox
 
 run: build
-	cargo run -p code-agent
+	cargo run -p custodex
 
 build:
 	cargo build

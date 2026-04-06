@@ -1,0 +1,11 @@
+[package]
+name = "custodex"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+code-agent.workspace = true
+dashboard.workspace = true
+eframe.workspace = true
+tokio.workspace = true
+tracing-subscriber.workspace = true

@@ -1510,12 +1510,10 @@ version = "0.1.0"
 dependencies = [
  "codex-bridge",
  "dashboard",
- "eframe",
  "telegram-adapter",
  "teloxide",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -2811,6 +2809,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.114",
+]
+
+[[package]]
+name = "custodex"
+version = "0.1.0"
+dependencies = [
+ "code-agent",
+ "dashboard",
+ "eframe",
+ "tokio",
+ "tracing-subscriber",
 ]
 
 [[package]]
