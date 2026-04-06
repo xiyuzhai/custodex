@@ -373,11 +373,13 @@ dependencies = [
 name = "all-bots"
 version = "0.1.0"
 dependencies = [
+ "auto-approve",
  "code-agent",
  "dashboard",
  "eframe",
  "serde",
  "serde_json",
+ "simple-chat",
 ]
 
 [[package]]
@@ -855,6 +857,18 @@ dependencies = [
  "serde",
  "zbus",
  "zvariant",
+]
+
+[[package]]
+name = "auto-approve"
+version = "0.1.0"
+dependencies = [
+ "codex-bridge",
+ "dashboard",
+ "telegram-adapter",
+ "teloxide",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -9062,6 +9076,18 @@ name = "similar"
 version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
+
+[[package]]
+name = "simple-chat"
+version = "0.1.0"
+dependencies = [
+ "codex-bridge",
+ "dashboard",
+ "telegram-adapter",
+ "teloxide",
+ "tokio",
+ "tracing",
+]
 
 [[package]]
 name = "siphasher"

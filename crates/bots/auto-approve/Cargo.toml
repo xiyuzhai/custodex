@@ -1,0 +1,12 @@
+[package]
+name = "auto-approve"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+codex-bridge.workspace = true
+telegram-adapter.workspace = true
+dashboard.workspace = true
+teloxide.workspace = true
+tokio.workspace = true
+tracing.workspace = true

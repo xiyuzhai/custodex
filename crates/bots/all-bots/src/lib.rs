@@ -7,20 +7,30 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum TemplateKind {
     CodeAgent,
+    SimpleChat,
+    AutoApprove,
 }
 
 impl TemplateKind {
-    pub const ALL: &[TemplateKind] = &[TemplateKind::CodeAgent];
+    pub const ALL: &[TemplateKind] = &[
+        TemplateKind::CodeAgent,
+        TemplateKind::SimpleChat,
+        TemplateKind::AutoApprove,
+    ];
 
     pub fn name(&self) -> &str {
         match self {
             Self::CodeAgent => "code-agent",
+            Self::SimpleChat => "simple-chat",
+            Self::AutoApprove => "auto-approve",
         }
     }
 
     pub fn description(&self) -> &str {
         match self {
             Self::CodeAgent => "Full code agent with tool execution and approval flow",
+            Self::SimpleChat => "Text conversation only, no tool execution",
+            Self::AutoApprove => "Code agent that auto-approves all tool calls",
         }
     }
 }
@@ -29,6 +39,8 @@ impl TemplateKind {
 #[derive(Clone, Serialize, Deserialize)]
 pub enum TemplateConfig {
     CodeAgent(CodeAgentConfig),
+    SimpleChat(SimpleChatConfig),
+    AutoApprove(AutoApproveConfig),
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -48,24 +60,56 @@ impl Default for CodeAgentConfig {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SimpleChatConfig {
+    pub model: String,
+}
+
+impl Default for SimpleChatConfig {
+    fn default() -> Self {
+        Self {
+            model: String::new(),
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AutoApproveConfig {
+    pub work_dir: String,
+    pub model: String,
+}
+
+impl Default for AutoApproveConfig {
+    fn default() -> Self {
+        Self {
+            work_dir: ".local/home/auto-approve".to_string(),
+            model: String::new(),
+        }
+    }
+}
+
 impl TemplateConfig {
     pub fn new(kind: &TemplateKind) -> Self {
         match kind {
             TemplateKind::CodeAgent => Self::CodeAgent(CodeAgentConfig::default()),
+            TemplateKind::SimpleChat => Self::SimpleChat(SimpleChatConfig::default()),
+            TemplateKind::AutoApprove => Self::AutoApprove(AutoApproveConfig::default()),
         }
     }
 
-    /// Number of wizard steps for this config.
     pub fn step_count(&self) -> usize {
         match self {
             Self::CodeAgent(_) => 2,
+            Self::SimpleChat(_) => 1,
+            Self::AutoApprove(_) => 1,
         }
     }
 
-    /// Render a wizard step. Returns true if the step is valid (Next enabled).
     pub fn render_step(&mut self, ui: &mut egui::Ui, step: usize) -> bool {
         match self {
             Self::CodeAgent(cfg) => render_code_agent_step(ui, cfg, step),
+            Self::SimpleChat(cfg) => render_simple_chat_step(ui, cfg, step),
+            Self::AutoApprove(cfg) => render_auto_approve_step(ui, cfg, step),
         }
     }
 }
@@ -88,6 +132,44 @@ fn render_code_agent_step(ui: &mut egui::Ui, cfg: &mut CodeAgentConfig, step: us
             ui.radio_value(&mut cfg.auto_approve, false, "Ask for approval (default)");
             ui.radio_value(&mut cfg.auto_approve, true, "Auto-approve all commands");
             true
+        }
+        _ => true,
+    }
+}
+
+fn render_simple_chat_step(ui: &mut egui::Ui, cfg: &mut SimpleChatConfig, step: usize) -> bool {
+    match step {
+        0 => {
+            ui.heading("Model");
+            ui.add_space(8.0);
+            ui.label("Model (leave empty for default):");
+            ui.text_edit_singleline(&mut cfg.model);
+            true
+        }
+        _ => true,
+    }
+}
+
+fn render_auto_approve_step(
+    ui: &mut egui::Ui,
+    cfg: &mut AutoApproveConfig,
+    step: usize,
+) -> bool {
+    match step {
+        0 => {
+            ui.heading("Auto-Approve Agent");
+            ui.add_space(8.0);
+            ui.label(
+                egui::RichText::new("Warning: this bot auto-approves ALL tool calls.")
+                    .color(egui::Color32::YELLOW),
+            );
+            ui.add_space(8.0);
+            ui.label("Working directory:");
+            ui.text_edit_singleline(&mut cfg.work_dir);
+            ui.add_space(4.0);
+            ui.label("Model (leave empty for default):");
+            ui.text_edit_singleline(&mut cfg.model);
+            !cfg.work_dir.is_empty()
         }
         _ => true,
     }
@@ -124,7 +206,6 @@ impl WizardState {
         self.active = false;
     }
 
-    /// Render the wizard. Returns Some(TemplateConfig) when the user clicks Launch.
     pub fn render(&mut self, ctx: &egui::Context) -> Option<TemplateConfig> {
         if !self.active {
             return None;
@@ -138,7 +219,6 @@ impl WizardState {
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .show(ctx, |ui| {
                 if self.selected_template.is_none() {
-                    // Step 0: template selection
                     ui.heading("Select Bot Template");
                     ui.add_space(8.0);
 
@@ -163,7 +243,6 @@ impl WizardState {
                         self.close();
                     }
                 } else if let Some(config) = &mut self.config {
-                    // Config steps
                     let total_steps = config.step_count();
                     let valid = config.render_step(ui, self.step);
 
@@ -205,7 +284,6 @@ pub struct SavedInstance {
     pub config: TemplateConfig,
 }
 
-/// Save a list of instances to a JSON file in the custodex directory.
 pub fn save_instances(custodex_dir: &Path, instances: &[SavedInstance]) -> std::io::Result<()> {
     let path = custodex_dir.join("instances.json");
     let json = serde_json::to_string_pretty(instances)
@@ -213,7 +291,6 @@ pub fn save_instances(custodex_dir: &Path, instances: &[SavedInstance]) -> std::
     std::fs::write(path, json)
 }
 
-/// Load saved instances from the custodex directory. Returns empty vec if file doesn't exist.
 pub fn load_instances(custodex_dir: &Path) -> Vec<SavedInstance> {
     let path = custodex_dir.join("instances.json");
     let Ok(json) = std::fs::read_to_string(path) else {

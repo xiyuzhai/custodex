@@ -85,6 +85,8 @@ impl CustodexApp {
     fn add_instance(&mut self, config: TemplateConfig) {
         let template = match &config {
             TemplateConfig::CodeAgent(_) => TemplateKind::CodeAgent,
+            TemplateConfig::SimpleChat(_) => TemplateKind::SimpleChat,
+            TemplateConfig::AutoApprove(_) => TemplateKind::AutoApprove,
         };
         let id = format!("{}-{}", template.name(), self.saved_instances.len());
         let saved = SavedInstance {

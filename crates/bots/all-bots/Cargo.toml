@@ -5,6 +5,8 @@ edition.workspace = true
 
 [dependencies]
 code-agent.workspace = true
+simple-chat.workspace = true
+auto-approve.workspace = true
 dashboard.workspace = true
 eframe.workspace = true
 serde = { version = "1", features = ["derive"] }
