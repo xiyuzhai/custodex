@@ -150,7 +150,7 @@ impl CustodexApp {
                     );
                 });
 
-                if resp.response.clicked() {
+                if resp.response.interact(egui::Sense::click()).clicked() {
                     clicked_idx = Some(idx);
                 }
             }
