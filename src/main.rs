@@ -1,13 +1,12 @@
 mod adapter;
+mod bot;
+mod gui;
+mod monitor;
 mod session;
 
-use session::SessionManager;
-use std::sync::Arc;
-use teloxide::prelude::*;
-use teloxide::types::Me;
+use monitor::{MonitorConfig, new_shared_monitor};
 
-#[tokio::main]
-async fn main() {
+fn main() {
     tracing_subscriber::fmt::init();
 
     let token_path = std::env::args()
@@ -18,52 +17,24 @@ async fn main() {
         .trim()
         .to_string();
 
-    let bot = Bot::new(token);
-    let me: Me = bot.get_me().await.expect("failed to get bot info");
-    tracing::info!("starting bot: @{}", me.username());
+    let sandbox_exe = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../codex/codex-rs/target/release/codex-linux-sandbox");
 
-    let session_mgr = Arc::new(SessionManager::new().await);
+    let monitor = new_shared_monitor(MonitorConfig {
+        token_path: token_path.clone(),
+        sandbox_exe: sandbox_exe.display().to_string(),
+        model: String::new(), // will be filled from config later
+    });
 
-    let handler = dptree::entry()
-        .branch(Update::filter_message().endpoint(handle_message))
-        .branch(Update::filter_callback_query().endpoint(handle_callback));
+    let rt = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
 
-    Dispatcher::builder(bot, handler)
-        .dependencies(dptree::deps![session_mgr])
-        .build()
-        .dispatch()
-        .await;
-}
-
-async fn handle_message(
-    bot: Bot,
-    msg: Message,
-    session_mgr: Arc<SessionManager>,
-) -> ResponseResult<()> {
-    let Some(text) = msg.text() else {
-        return Ok(());
-    };
-
-    let chat_id = msg.chat.id;
-    session_mgr.handle_user_message(bot, chat_id, text).await;
-    Ok(())
-}
-
-async fn handle_callback(
-    bot: Bot,
-    q: CallbackQuery,
-    session_mgr: Arc<SessionManager>,
-) -> ResponseResult<()> {
-    let Some(data) = q.data.as_deref() else {
-        return Ok(());
-    };
-    let Some(msg) = q.message else {
-        return Ok(());
-    };
-
-    let chat_id = msg.chat().id;
-    session_mgr
-        .handle_approval_callback(bot, chat_id, data)
-        .await;
-    Ok(())
+    let options = eframe::NativeOptions::default();
+    eframe::run_native(
+        "codex-telegram",
+        options,
+        Box::new(move |_cc| {
+            Ok(Box::new(gui::ControlPanel::new(rt, token, monitor)) as Box<dyn eframe::App>)
+        }),
+    )
+    .expect("eframe failed");
 }

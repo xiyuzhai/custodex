@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use codex_core::config::Config;
+use codex_core::config::{Config, ConfigOverrides};
 use codex_core::CodexThread;
 use codex_core::NewThread;
 use codex_core::ThreadManager;
@@ -17,6 +17,7 @@ use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, MessageId, Par
 use tokio::sync::Mutex;
 
 use crate::adapter::{self, ApprovalKind, TelegramAction};
+use crate::monitor::SharedMonitor;
 
 /// Minimum interval between Telegram message edits to avoid rate limits.
 const EDIT_INTERVAL_MS: u128 = 500;
@@ -37,11 +38,18 @@ struct ChatState {
 pub struct SessionManager {
     thread_mgr: Arc<ThreadManager>,
     chats: DashMap<ChatId, Arc<Mutex<ChatState>>>,
+    monitor: SharedMonitor,
 }
 
 impl SessionManager {
-    pub async fn new() -> Self {
-        let config = Config::load_with_cli_overrides(vec![])
+    pub async fn new(monitor: SharedMonitor) -> Self {
+        let sandbox_exe = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../codex/codex-rs/target/release/codex-linux-sandbox");
+        let overrides = ConfigOverrides {
+            codex_linux_sandbox_exe: Some(sandbox_exe),
+            ..Default::default()
+        };
+        let config = Config::load_with_cli_overrides_and_harness_overrides(vec![], overrides)
             .await
             .expect("failed to load codex config");
 
@@ -66,10 +74,23 @@ impl SessionManager {
         Self {
             thread_mgr,
             chats: DashMap::new(),
+            monitor,
         }
     }
 
+    fn log(&self, chat_id: Option<i64>, message: String) {
+        let mut m = self.monitor.lock().unwrap();
+        m.push_log(chat_id, message);
+    }
+
     pub async fn handle_user_message(&self, bot: Bot, chat_id: ChatId, text: &str) {
+        let cid = chat_id.0;
+        self.log(Some(cid), format!("User: {text}"));
+        {
+            let mut m = self.monitor.lock().unwrap();
+            m.update_session_activity(cid);
+        }
+
         let chat_state = self.get_or_create_chat(chat_id).await;
         let state = chat_state.lock().await;
         let thread = Arc::clone(&state.thread);
@@ -105,6 +126,11 @@ impl SessionManager {
             "approve_session" => ReviewDecision::ApprovedForSession,
             _ => ReviewDecision::Denied,
         };
+
+        self.log(
+            Some(chat_id.0),
+            format!("Approval: {data} for {}", approval.call_id),
+        );
 
         let op = match approval.kind {
             ApprovalKind::Exec => Op::ExecApproval {
@@ -143,6 +169,7 @@ impl SessionManager {
     /// Consume events from the thread until turn completes or an approval is needed.
     #[allow(unused_assignments)]
     async fn drain_events(&self, bot: Bot, chat_id: ChatId, thread: &CodexThread) {
+        let cid = chat_id.0;
         let mut delta_buf = String::new();
         let mut delta_msg_id: Option<MessageId> = None;
         let mut last_edit = Instant::now();
@@ -151,7 +178,7 @@ impl SessionManager {
             let event = match thread.next_event().await {
                 Ok(ev) => ev,
                 Err(e) => {
-                    tracing::error!("event stream error: {e}");
+                    self.log(Some(cid), format!("Event stream error: {e}"));
                     bot.send_message(chat_id, format!("Internal error: {e}"))
                         .await
                         .ok();
@@ -163,6 +190,19 @@ impl SessionManager {
                 event.msg,
                 EventMsg::TurnComplete(_) | EventMsg::TurnAborted(_)
             );
+
+            // Log token counts
+            if let EventMsg::TokenCount(tc) = &event.msg {
+                if let Some(info) = &tc.info {
+                    let mut m = self.monitor.lock().unwrap();
+                    m.input_tokens = info.total_token_usage.input_tokens as u64;
+                    m.output_tokens = info.total_token_usage.output_tokens as u64;
+                }
+            }
+
+            // Log event to monitor
+            let event_summary = format!("{:?}", std::mem::discriminant(&event.msg));
+            self.log(Some(cid), event_summary);
 
             match adapter::classify_event(&event.msg) {
                 TelegramAction::Delta(text) => {
@@ -177,6 +217,7 @@ impl SessionManager {
                     }
                 }
                 TelegramAction::Send(text) => {
+                    self.log(Some(cid), format!("-> {text}"));
                     // Flush any pending delta first
                     if !delta_buf.is_empty() {
                         send_or_edit_delta(&bot, chat_id, delta_msg_id, &delta_buf).await;
@@ -186,6 +227,10 @@ impl SessionManager {
                     bot.send_message(chat_id, text).await.ok();
                 }
                 TelegramAction::ApprovalPrompt(info) => {
+                    self.log(
+                        Some(cid),
+                        format!("Approval needed: {} ({})", info.call_id, info.text),
+                    );
                     // Flush delta
                     if !delta_buf.is_empty() {
                         send_or_edit_delta(&bot, chat_id, delta_msg_id, &delta_buf).await;
@@ -220,6 +265,7 @@ impl SessionManager {
             }
 
             if is_turn_end {
+                self.log(Some(cid), "Turn ended.".to_string());
                 // Final flush of any remaining delta
                 if !delta_buf.is_empty() {
                     send_or_edit_delta(&bot, chat_id, delta_msg_id, &delta_buf).await;
@@ -233,6 +279,8 @@ impl SessionManager {
         if let Some(state) = self.chats.get(&chat_id) {
             return state.clone();
         }
+
+        self.log(Some(chat_id.0), "Creating new session.".to_string());
 
         let thread_config = Config::load_with_cli_overrides(vec![])
             .await
