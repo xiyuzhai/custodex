@@ -1,36 +1,97 @@
 # Dashboard Layout
 
-## Overall structure
+## Main view
+
+The left sidebar lists instances. The right area shows the selected instance's detail view. No split panels — one thing at a time.
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│  Service: Running  │ Start/Stop │ Instances: 3 │ Tokens  │  ← status bar
-├────────────┬───────────────────────────────┬─────────────┤
-│            │                               │             │
-│ Instances  │       Event Log               │   Config    │
-│            │                               │             │
-│ [Chat 123] │  0.1s [123] User: hello       │ Token file: │
-│  msgs: 5   │  0.3s [123] AgentMessageDelta │ Sandbox:    │
-│  last: 2s  │  0.5s [123] TurnComplete      │ Model:      │
-│            │  1.2s [456] User: fix bug      │             │
-│ [Chat 456] │  1.4s [456] ExecCommandBegin  │             │
-│  msgs: 12  │                               │             │
-│  last: 0s  │                               │             │
-│            │                               │             │
-│ [+ New]    │  [Auto-scroll ✓] [Clear]      │             │
-│            │                               │             │
-└────────────┴───────────────────────────────┴─────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ ● Running    custodex                       12 in / 8 out   │
+├──────────────┬───────────────────────────────────────────────┤
+│              │                                               │
+│ [+ New]      │                                               │
+│              │   (select an instance to view details)        │
+│ ┌──────────┐ │                                               │
+│ │code-agent│ │                                               │
+│ │ ● 5 msgs │ │                                               │
+│ └──────────┘ │                                               │
+│              │                                               │
+│ ┌──────────┐ │                                               │
+│ │simple    │ │                                               │
+│ │chat      │ │                                               │
+│ │ ○ idle   │ │                                               │
+│ └──────────┘ │                                               │
+│              │                                               │
+│ ┌──────────┐ │                                               │
+│ │auto      │ │                                               │
+│ │approve   │ │                                               │
+│ │ ○ idle   │ │                                               │
+│ └──────────┘ │                                               │
+│              │                                               │
+└──────────────┴───────────────────────────────────────────────┘
 ```
 
-## Panels
+## After clicking an instance
 
-- **Top**: Status bar — service status, start/stop button, instance count, token usage
-- **Left**: Instances panel — list of active instances, [+ New] button for wizard
-- **Center**: Event log — scrollable, monospace, auto-scroll toggle, clear button
-- **Right**: Configuration — current system config (read-only display)
+The right area shows that instance's detail window: event log, config, status.
 
-## Interaction
+```
+┌──────────────────────────────────────────────────────────────┐
+│ ● Running    custodex                       12 in / 8 out   │
+├──────────────┬───────────────────────────────────────────────┤
+│              │                                               │
+│ [+ New]      │  code-agent-0                                 │
+│              │  Template: code-agent                         │
+│ ┌──────────┐ │  Status: ● active                             │
+│ │code-agent│◄│  Work dir: .local/home/code-agent             │
+│ │ ● 5 msgs │ │  Model: (default)                             │
+│ └──────────┘ │                                               │
+│              │  ── Event Log ──────────────────────────────   │
+│ ┌──────────┐ │  12:01:03  User: fix the login bug            │
+│ │simple    │ │  12:01:04  AgentMessageDelta                  │
+│ │chat      │ │  12:01:04  ExecCommandBegin                   │
+│ │ ○ idle   │ │  12:01:05  → Running: cargo test              │
+│ └──────────┘ │  12:01:08  ExecCommandEnd                     │
+│              │  12:01:08  TurnComplete                       │
+│ ┌──────────┐ │                                               │
+│ │auto      │ │                                               │
+│ │approve   │ │  ──────────────────────────────────────────   │
+│ │ ○ idle   │ │  Filter: [____________]            [Clear]    │
+│ └──────────┘ │                                               │
+└──────────────┴───────────────────────────────────────────────┘
+```
 
-- Start/Stop controls the Telegram bot connection
-- Clicking an instance could filter the event log (future)
-- [+ New] opens the instance creation wizard (see [new_instance.md](new_instance.md))
+## [+ New] clicked — wizard overlay
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ ● Running    custodex                       12 in / 8 out   │
+├──────────────┬───────────────────────────────────────────────┤
+│              │ ┌──────────────────────────────────────────┐  │
+│ [+ New]      │ │                                          │  │
+│              │ │   Select Bot Template                    │  │
+│ ┌──────────┐ │ │                                          │  │
+│ │code-agent│ │ │   [code-agent]                           │  │
+│ │ ● 5 msgs │ │ │    Full code agent with tool execution   │  │
+│ └──────────┘ │ │                                          │  │
+│              │ │   [simple-chat]                          │  │
+│ ┌──────────┐ │ │    Text conversation only                │  │
+│ │simple    │ │ │                                          │  │
+│ │chat      │ │ │   [auto-approve]                        │  │
+│ │ ○ idle   │ │ │    Code agent, auto-approves all         │  │
+│ └──────────┘ │ │                                          │  │
+│              │ │                          [Cancel]        │  │
+│ ┌──────────┐ │ │                                          │  │
+│ │auto      │ │ └──────────────────────────────────────────┘  │
+│ │approve   │ │                                               │
+│ │ ○ idle   │ │                                               │
+│ └──────────┘ │                                               │
+└──────────────┴───────────────────────────────────────────────┘
+```
+
+## Interaction summary
+
+1. App launches → three default instances in sidebar
+2. Click an instance → right area shows its detail (config + event log filtered to it)
+3. Click [+ New] → wizard overlay for creating a new instance
+4. Status bar always visible at top — bot status, token usage

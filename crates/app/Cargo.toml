@@ -2,6 +2,7 @@
 name = "custodex"
 version.workspace = true
 edition.workspace = true
+default-run = "custodex"
 
 [dependencies]
 all-bots.workspace = true

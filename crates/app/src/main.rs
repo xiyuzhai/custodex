@@ -66,6 +66,7 @@ fn setup() -> (
 struct CustodexApp {
     state: AppState,
     wizard: WizardState,
+    selected_instance: Option<usize>,
 }
 
 impl CustodexApp {
@@ -73,7 +74,197 @@ impl CustodexApp {
         Self {
             state,
             wizard: WizardState::default(),
+            selected_instance: None,
         }
+    }
+
+    fn render_status_bar(&mut self, ui: &mut egui::Ui) {
+        let status = self.state.get_service_status();
+        let (input_tokens, output_tokens) = self.state.get_token_usage();
+
+        ui.horizontal(|ui| {
+            let (dot, text, color) = match &status {
+                dashboard::ServiceStatus::Stopped => ("○", "Stopped", egui::Color32::GRAY),
+                dashboard::ServiceStatus::Starting => ("◐", "Starting", egui::Color32::YELLOW),
+                dashboard::ServiceStatus::Running => ("●", "Running", egui::Color32::from_rgb(166, 227, 161)),
+                dashboard::ServiceStatus::Error(_) => ("●", "Error", egui::Color32::from_rgb(243, 139, 168)),
+            };
+            ui.label(egui::RichText::new(dot).color(color));
+            ui.label(egui::RichText::new(text).color(color));
+
+            ui.separator();
+
+            match &status {
+                dashboard::ServiceStatus::Stopped | dashboard::ServiceStatus::Error(_) => {
+                    if ui.button("Start").clicked() {
+                        self.state.start_bot();
+                    }
+                }
+                _ => {
+                    if ui.button("Stop").clicked() {
+                        self.state.stop_bot();
+                    }
+                }
+            }
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.label(
+                    egui::RichText::new(format!("{input_tokens} in / {output_tokens} out"))
+                        .color(egui::Color32::from_rgb(166, 173, 200)),
+                );
+            });
+        });
+    }
+
+    fn render_sidebar(&mut self, ui: &mut egui::Ui) {
+        if ui
+            .add(egui::Button::new("+ New Instance").min_size(egui::vec2(ui.available_width(), 0.0)))
+            .clicked()
+        {
+            self.wizard.open();
+        }
+
+        ui.add_space(8.0);
+        ui.separator();
+        ui.add_space(4.0);
+
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            let mut clicked_idx = None;
+            for (idx, inst) in self.state.saved_instances.iter().enumerate() {
+                let is_selected = self.selected_instance == Some(idx);
+
+                let resp = ui.group(|ui| {
+                    ui.horizontal(|ui| {
+                        let dot_color = if is_selected {
+                            egui::Color32::from_rgb(137, 180, 250)
+                        } else {
+                            egui::Color32::GRAY
+                        };
+                        ui.label(egui::RichText::new("●").color(dot_color));
+                        ui.label(egui::RichText::new(inst.template.name()).strong());
+                    });
+                    ui.label(
+                        egui::RichText::new(&inst.id)
+                            .color(egui::Color32::from_rgb(166, 173, 200))
+                            .small(),
+                    );
+                });
+
+                if resp.response.clicked() {
+                    clicked_idx = Some(idx);
+                }
+            }
+
+            if let Some(idx) = clicked_idx {
+                if self.selected_instance == Some(idx) {
+                    self.selected_instance = None;
+                } else {
+                    self.selected_instance = Some(idx);
+                    self.state.log_filter_text.clear();
+                }
+            }
+        });
+    }
+
+    fn render_detail_view(&mut self, ui: &mut egui::Ui) {
+        let Some(idx) = self.selected_instance else {
+            ui.centered_and_justified(|ui| {
+                ui.label(
+                    egui::RichText::new("Select an instance to view details")
+                        .color(egui::Color32::from_rgb(166, 173, 200)),
+                );
+            });
+            return;
+        };
+
+        let Some(inst) = self.state.saved_instances.get(idx) else {
+            self.selected_instance = None;
+            return;
+        };
+
+        // Instance header
+        ui.heading(&inst.id);
+        ui.horizontal(|ui| {
+            ui.label("Template:");
+            ui.label(egui::RichText::new(inst.template.name()).strong());
+        });
+        ui.horizontal(|ui| {
+            ui.label("Description:");
+            ui.label(inst.template.description());
+        });
+
+        // Show template-specific config
+        match &inst.config {
+            all_bots::TemplateConfig::CodeAgent(cfg) => {
+                ui.horizontal(|ui| {
+                    ui.label("Work dir:");
+                    ui.label(&cfg.work_dir);
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Model:");
+                    ui.label(if cfg.model.is_empty() { "(default)" } else { &cfg.model });
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Auto-approve:");
+                    ui.label(if cfg.auto_approve { "yes" } else { "no" });
+                });
+            }
+            all_bots::TemplateConfig::SimpleChat(cfg) => {
+                ui.horizontal(|ui| {
+                    ui.label("Model:");
+                    ui.label(if cfg.model.is_empty() { "(default)" } else { &cfg.model });
+                });
+            }
+            all_bots::TemplateConfig::AutoApprove(cfg) => {
+                ui.horizontal(|ui| {
+                    ui.label("Work dir:");
+                    ui.label(&cfg.work_dir);
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Model:");
+                    ui.label(if cfg.model.is_empty() { "(default)" } else { &cfg.model });
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Auto-approve:");
+                    ui.label(
+                        egui::RichText::new("ALL commands")
+                            .color(egui::Color32::from_rgb(250, 179, 135)),
+                    );
+                });
+            }
+        }
+
+        ui.add_space(8.0);
+        ui.separator();
+        ui.add_space(4.0);
+
+        // Event log for this instance
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("Event Log").strong());
+            ui.separator();
+            ui.label("Filter:");
+            ui.add(
+                egui::TextEdit::singleline(&mut self.state.log_filter_text).desired_width(120.0),
+            );
+            if ui.button("Clear").clicked() {
+                let mut d = self.state.dashboard.lock().unwrap();
+                d.log.clear();
+            }
+        });
+        ui.add_space(4.0);
+
+        let entries = self.state.get_log_entries();
+        egui::ScrollArea::vertical()
+            .auto_shrink([false, false])
+            .stick_to_bottom(true)
+            .show(ui, |ui| {
+                for (chat_id, msg) in &entries {
+                    let chat_str = chat_id.map(|id| format!("[{id}]")).unwrap_or_default();
+                    ui.label(
+                        egui::RichText::new(format!("{chat_str:>14} {msg}")).monospace(),
+                    );
+                }
+            });
     }
 }
 
@@ -81,108 +272,22 @@ impl eframe::App for CustodexApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         ctx.request_repaint_after(std::time::Duration::from_millis(200));
 
-        let status = self.state.get_service_status();
-        let (input_tokens, output_tokens) = self.state.get_token_usage();
-
         // Status bar
         egui::TopBottomPanel::top("status_bar").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                let (text, color) = match &status {
-                    dashboard::ServiceStatus::Stopped => ("Stopped", egui::Color32::GRAY),
-                    dashboard::ServiceStatus::Starting => ("Starting...", egui::Color32::YELLOW),
-                    dashboard::ServiceStatus::Running => ("Running", egui::Color32::GREEN),
-                    dashboard::ServiceStatus::Error(e) => {
-                        ui.label(egui::RichText::new(format!("Error: {e}")).color(egui::Color32::RED));
-                        ("Error", egui::Color32::RED)
-                    }
-                };
-                ui.label(egui::RichText::new(format!("Service: {text}")).color(color));
-                ui.separator();
-                match &status {
-                    dashboard::ServiceStatus::Stopped | dashboard::ServiceStatus::Error(_) => {
-                        if ui.button("Start").clicked() { self.state.start_bot(); }
-                    }
-                    _ => {
-                        if ui.button("Stop").clicked() { self.state.stop_bot(); }
-                    }
-                }
-                ui.separator();
-                ui.label(format!("Instances: {}", self.state.saved_instances.len()));
-                ui.separator();
-                ui.label(format!("Tokens: {} in / {} out", input_tokens, output_tokens));
-            });
+            self.render_status_bar(ui);
         });
 
-        // Left: instances
-        egui::SidePanel::left("instances_panel")
-            .default_width(250.0)
+        // Left sidebar: instances
+        egui::SidePanel::left("sidebar")
+            .default_width(180.0)
+            .min_width(140.0)
             .show(ctx, |ui| {
-                ui.heading("Instances");
-                ui.separator();
-
-                if self.state.log_filter_chat.is_some() {
-                    if ui.button("Show All").clicked() {
-                        self.state.set_log_filter_chat(None);
-                    }
-                    ui.separator();
-                }
-
-                if self.state.saved_instances.is_empty() {
-                    ui.label("No instances.");
-                } else {
-                    for inst in &self.state.saved_instances {
-                        let resp = ui.group(|ui| {
-                            ui.label(egui::RichText::new(&inst.id).strong());
-                            ui.label(inst.template.name());
-                        });
-                        if resp.response.clicked() {
-                            // TODO: filter by instance
-                        }
-                    }
-                }
-
-                ui.add_space(8.0);
-                if ui.button("+ New Instance").clicked() {
-                    self.wizard.open();
-                }
+                self.render_sidebar(ui);
             });
 
-        // Right: config
-        egui::SidePanel::right("config_panel")
-            .default_width(250.0)
-            .show(ctx, |ui| {
-                ui.heading("Configuration");
-                ui.separator();
-                let d = self.state.dashboard.lock().unwrap();
-                ui.label(format!("Token: {}", d.config.token_path));
-                ui.label(format!("Sandbox: {}", d.config.sandbox_exe));
-                ui.label(format!("Model: {}", if d.config.model.is_empty() { "(default)" } else { &d.config.model }));
-            });
-
-        // Center: event log
+        // Right: detail view of selected instance
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.heading("Event Log");
-                ui.separator();
-                ui.label("Filter:");
-                ui.text_edit_singleline(&mut self.state.log_filter_text);
-                if ui.button("Clear").clicked() {
-                    let mut d = self.state.dashboard.lock().unwrap();
-                    d.log.clear();
-                }
-            });
-            ui.separator();
-
-            let entries = self.state.get_log_entries();
-            egui::ScrollArea::vertical()
-                .auto_shrink([false, false])
-                .stick_to_bottom(true)
-                .show(ui, |ui| {
-                    for (chat_id, msg) in &entries {
-                        let chat_str = chat_id.map(|id| format!("[{id}]")).unwrap_or_default();
-                        ui.label(egui::RichText::new(format!("{chat_str:>14} {msg}")).monospace());
-                    }
-                });
+            self.render_detail_view(ui);
         });
 
         // Wizard overlay
