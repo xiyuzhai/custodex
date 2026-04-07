@@ -1,0 +1,5 @@
+[package]
+name = "codex-sandbox"
+version.workspace = true
+edition.workspace = true
+build = "build.rs"

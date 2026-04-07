@@ -38,8 +38,7 @@ fn setup() -> (
         .trim()
         .to_string();
 
-    let sandbox_exe = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../codex/codex-rs/target/release/codex-linux-sandbox");
+    let sandbox_exe = codex_sandbox::sandbox_exe();
 
     let work_dir = home_root.join(code_agent::TEMPLATE_NAME);
     std::fs::create_dir_all(&work_dir).expect("failed to create working dir");

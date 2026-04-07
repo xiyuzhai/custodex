@@ -1554,6 +1554,7 @@ dependencies = [
 [[package]]
 name = "codex-analytics"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "codex-app-server-protocol",
  "codex-git-utils",
@@ -1570,6 +1571,7 @@ dependencies = [
 [[package]]
 name = "codex-api"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -1596,6 +1598,7 @@ dependencies = [
 [[package]]
 name = "codex-app-server-protocol"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "clap",
@@ -1620,6 +1623,7 @@ dependencies = [
 [[package]]
 name = "codex-apply-patch"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "similar",
@@ -1631,6 +1635,7 @@ dependencies = [
 [[package]]
 name = "codex-async-utils"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "async-trait",
  "tokio",
@@ -1655,6 +1660,7 @@ dependencies = [
 [[package]]
 name = "codex-client"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "async-trait",
  "bytes",
@@ -1680,6 +1686,7 @@ dependencies = [
 [[package]]
 name = "codex-code-mode"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "async-trait",
  "serde",
@@ -1693,10 +1700,12 @@ dependencies = [
 [[package]]
 name = "codex-collaboration-mode-templates"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 
 [[package]]
 name = "codex-config"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "codex-app-server-protocol",
  "codex-execpolicy",
@@ -1720,6 +1729,7 @@ dependencies = [
 [[package]]
 name = "codex-connectors"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "codex-app-server-protocol",
@@ -1730,6 +1740,7 @@ dependencies = [
 [[package]]
 name = "codex-core"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -1830,6 +1841,7 @@ dependencies = [
 [[package]]
 name = "codex-core-skills"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "codex-analytics",
@@ -1857,6 +1869,7 @@ dependencies = [
 [[package]]
 name = "codex-exec-server"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -1877,6 +1890,7 @@ dependencies = [
 [[package]]
 name = "codex-execpolicy"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "clap",
@@ -1892,6 +1906,7 @@ dependencies = [
 [[package]]
 name = "codex-experimental-api-macros"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1901,6 +1916,7 @@ dependencies = [
 [[package]]
 name = "codex-features"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "codex-login",
  "codex-otel",
@@ -1914,6 +1930,7 @@ dependencies = [
 [[package]]
 name = "codex-feedback"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "codex-login",
@@ -1926,6 +1943,7 @@ dependencies = [
 [[package]]
 name = "codex-file-search"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "clap",
@@ -1940,6 +1958,7 @@ dependencies = [
 [[package]]
 name = "codex-git-utils"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "codex-utils-absolute-path",
  "futures",
@@ -1957,6 +1976,7 @@ dependencies = [
 [[package]]
 name = "codex-hooks"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1973,6 +1993,7 @@ dependencies = [
 [[package]]
 name = "codex-instructions"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "codex-protocol",
  "serde",
@@ -1981,6 +2002,7 @@ dependencies = [
 [[package]]
 name = "codex-keyring-store"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "keyring",
  "tracing",
@@ -1989,6 +2011,7 @@ dependencies = [
 [[package]]
 name = "codex-login"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -2023,6 +2046,7 @@ dependencies = [
 [[package]]
 name = "codex-mcp"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -2050,6 +2074,7 @@ dependencies = [
 [[package]]
 name = "codex-model-provider-info"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "codex-api",
  "codex-app-server-protocol",
@@ -2062,6 +2087,7 @@ dependencies = [
 [[package]]
 name = "codex-models-manager"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "chrono",
  "codex-api",
@@ -2085,6 +2111,7 @@ dependencies = [
 [[package]]
 name = "codex-network-proxy"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2114,6 +2141,7 @@ dependencies = [
 [[package]]
 name = "codex-otel"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "chrono",
  "codex-api",
@@ -2145,6 +2173,7 @@ dependencies = [
 [[package]]
 name = "codex-plugin"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "codex-utils-absolute-path",
  "codex-utils-plugins",
@@ -2154,6 +2183,7 @@ dependencies = [
 [[package]]
 name = "codex-protocol"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "chardetng",
  "chrono",
@@ -2190,6 +2220,7 @@ dependencies = [
 [[package]]
 name = "codex-response-debug-context"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "base64 0.22.1",
  "codex-api",
@@ -2200,6 +2231,7 @@ dependencies = [
 [[package]]
 name = "codex-rmcp-client"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "axum",
@@ -2230,6 +2262,7 @@ dependencies = [
 [[package]]
 name = "codex-rollout"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2251,8 +2284,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "codex-sandbox"
+version = "0.1.0"
+
+[[package]]
 name = "codex-sandboxing"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "codex-network-proxy",
  "codex-protocol",
@@ -2268,6 +2306,7 @@ dependencies = [
 [[package]]
 name = "codex-secrets"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "age",
  "anyhow",
@@ -2286,6 +2325,7 @@ dependencies = [
 [[package]]
 name = "codex-shell-command"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "base64 0.22.1",
  "codex-protocol",
@@ -2304,6 +2344,7 @@ dependencies = [
 [[package]]
 name = "codex-shell-escalation"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2323,6 +2364,7 @@ dependencies = [
 [[package]]
 name = "codex-skills"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "codex-utils-absolute-path",
  "include_dir",
@@ -2332,6 +2374,7 @@ dependencies = [
 [[package]]
 name = "codex-state"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2353,6 +2396,7 @@ dependencies = [
 [[package]]
 name = "codex-terminal-detection"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "tracing",
 ]
@@ -2360,6 +2404,7 @@ dependencies = [
 [[package]]
 name = "codex-tools"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "codex-app-server-protocol",
  "codex-code-mode",
@@ -2376,6 +2421,7 @@ dependencies = [
 [[package]]
 name = "codex-utils-absolute-path"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "dirs",
  "path-absolutize",
@@ -2387,6 +2433,7 @@ dependencies = [
 [[package]]
 name = "codex-utils-cache"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "lru",
  "sha1",
@@ -2396,6 +2443,7 @@ dependencies = [
 [[package]]
 name = "codex-utils-home-dir"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "dirs",
 ]
@@ -2403,6 +2451,7 @@ dependencies = [
 [[package]]
 name = "codex-utils-image"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "base64 0.22.1",
  "codex-utils-cache",
@@ -2415,6 +2464,7 @@ dependencies = [
 [[package]]
 name = "codex-utils-output-truncation"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "codex-protocol",
  "codex-utils-string",
@@ -2423,6 +2473,7 @@ dependencies = [
 [[package]]
 name = "codex-utils-path"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "codex-utils-absolute-path",
  "dunce",
@@ -2432,6 +2483,7 @@ dependencies = [
 [[package]]
 name = "codex-utils-plugins"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "codex-login",
  "serde",
@@ -2441,6 +2493,7 @@ dependencies = [
 [[package]]
 name = "codex-utils-pty"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "filedescriptor",
@@ -2456,6 +2509,7 @@ dependencies = [
 [[package]]
 name = "codex-utils-readiness"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "async-trait",
  "thiserror 2.0.18",
@@ -2466,6 +2520,7 @@ dependencies = [
 [[package]]
 name = "codex-utils-rustls-provider"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "rustls",
 ]
@@ -2473,10 +2528,12 @@ dependencies = [
 [[package]]
 name = "codex-utils-stream-parser"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 
 [[package]]
 name = "codex-utils-string"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "regex-lite",
 ]
@@ -2484,10 +2541,12 @@ dependencies = [
 [[package]]
 name = "codex-utils-template"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 
 [[package]]
 name = "codex-windows-sandbox"
 version = "0.0.0"
+source = "git+https://github.com/xiyuzhai/codex?rev=4fd5c35c4f6f51048f47c8680ed0f6a26c608f68#4fd5c35c4f6f51048f47c8680ed0f6a26c608f68"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -2842,6 +2901,7 @@ version = "0.1.0"
 dependencies = [
  "all-bots",
  "code-agent",
+ "codex-sandbox",
  "dashboard",
  "eframe",
  "tokio",

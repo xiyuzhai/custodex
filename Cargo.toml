@@ -2,6 +2,7 @@
 members = [
     "crates/app",
     "crates/codex/bridge",
+    "crates/codex/sandbox",
     "crates/llm/core",
     "crates/channels/telegram-adapter",
     "crates/ui/dashboard",
@@ -19,6 +20,7 @@ edition = "2024"
 [workspace.dependencies]
 # Internal crates
 codex-bridge = { path = "crates/codex/bridge" }
+codex-sandbox = { path = "crates/codex/sandbox" }
 llm-core = { path = "crates/llm/core" }
 telegram-adapter = { path = "crates/channels/telegram-adapter" }
 dashboard = { path = "crates/ui/dashboard" }
@@ -27,12 +29,12 @@ simple-chat = { path = "crates/bots/simple-chat" }
 auto-approve = { path = "crates/bots/auto-approve" }
 all-bots = { path = "crates/bots/all-bots" }
 
-# Codex deps
-codex-core = { path = "../codex/codex-rs/core" }
-codex-protocol = { path = "../codex/codex-rs/protocol" }
-codex-login = { path = "../codex/codex-rs/login" }
-codex-exec-server = { path = "../codex/codex-rs/exec-server" }
-codex-models-manager = { path = "../codex/codex-rs/models-manager" }
+# Codex deps (pinned to xiyuzhai/codex fork)
+codex-core = { git = "https://github.com/xiyuzhai/codex", rev = "4fd5c35c4f6f51048f47c8680ed0f6a26c608f68" }
+codex-protocol = { git = "https://github.com/xiyuzhai/codex", rev = "4fd5c35c4f6f51048f47c8680ed0f6a26c608f68" }
+codex-login = { git = "https://github.com/xiyuzhai/codex", rev = "4fd5c35c4f6f51048f47c8680ed0f6a26c608f68" }
+codex-exec-server = { git = "https://github.com/xiyuzhai/codex", rev = "4fd5c35c4f6f51048f47c8680ed0f6a26c608f68" }
+codex-models-manager = { git = "https://github.com/xiyuzhai/codex", rev = "4fd5c35c4f6f51048f47c8680ed0f6a26c608f68" }
 
 # External deps
 teloxide = { version = "0.13", features = ["macros"] }
