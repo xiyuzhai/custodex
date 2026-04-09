@@ -24,6 +24,7 @@ fn main() {
         token_path: "(headless)".to_string(),
         sandbox_exe: "(headless)".to_string(),
         model: String::new(),
+        dashboard_log_path: None,
     });
 
     let rt = tokio::runtime::Runtime::new().unwrap();
@@ -43,7 +44,7 @@ fn main() {
         })
     });
 
-    let mut state = AppState::new(rt, dashboard, bot_launcher, custodex_dir.clone());
+    let mut state = AppState::new_with_launcher(rt, dashboard, bot_launcher, custodex_dir.clone());
 
     // Test 1: initial state
     println!("1. Initial state");

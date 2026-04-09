@@ -1,4 +1,6 @@
 use std::collections::{HashMap, VecDeque};
+use std::io::Write;
+use std::path::PathBuf;
 use std::time::Instant;
 
 const MAX_LOG_ENTRIES: usize = 2000;
@@ -31,6 +33,16 @@ impl Dashboard {
     }
 
     pub fn push_log(&mut self, chat_id: Option<i64>, message: String) {
+        if let Some(path) = &self.config.dashboard_log_path {
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(path)
+            {
+                let chat = chat_id.map(|id| format!("[{id}] ")).unwrap_or_default();
+                let _ = writeln!(file, "{chat}{message}");
+            }
+        }
         self.log.push_back(LogEntry {
             timestamp: Instant::now(),
             chat_id,
@@ -76,4 +88,5 @@ pub struct DashboardConfig {
     pub token_path: String,
     pub sandbox_exe: String,
     pub model: String,
+    pub dashboard_log_path: Option<PathBuf>,
 }

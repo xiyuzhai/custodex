@@ -6,9 +6,11 @@ default-run = "custodex"
 
 [dependencies]
 all-bots.workspace = true
+auto-approve.workspace = true
 code-agent.workspace = true
 codex-sandbox.workspace = true
 dashboard.workspace = true
 eframe.workspace = true
+simple-chat.workspace = true
 tokio.workspace = true
 tracing-subscriber.workspace = true

@@ -33,26 +33,16 @@ pub fn classify_event(event: &EventMsg) -> TelegramAction {
 
         EventMsg::Error(err) => TelegramAction::Send(format!("Error: {}", err.message)),
 
-        EventMsg::ExecCommandBegin(cmd) => {
-            TelegramAction::Send(format!("Running: `{}`", cmd.command.join(" ")))
-        }
+        // Command lifecycle noise stays in the local dashboard log rather than spamming Telegram.
+        EventMsg::ExecCommandBegin(_) => TelegramAction::Skip,
 
-        EventMsg::ExecCommandEnd(cmd) => {
-            TelegramAction::Send(format!("Command done: `{}`", cmd.command.join(" ")))
-        }
+        EventMsg::ExecCommandEnd(_) => TelegramAction::Skip,
 
-        EventMsg::PatchApplyBegin(patch) => {
-            let files: Vec<_> = patch
-                .changes
-                .keys()
-                .map(|p| p.display().to_string())
-                .collect();
-            TelegramAction::Send(format!("Applying patch to: {}", files.join(", ")))
-        }
+        EventMsg::PatchApplyBegin(_) => TelegramAction::Skip,
 
         EventMsg::PatchApplyEnd(patch) => {
             if patch.success {
-                TelegramAction::Send("Patch applied.".to_string())
+                TelegramAction::Skip
             } else {
                 TelegramAction::Send(format!("Patch failed: {}", patch.stderr))
             }
@@ -81,6 +71,16 @@ pub fn classify_event(event: &EventMsg) -> TelegramAction {
                 turn_id: req.turn_id.clone(),
                 kind: ApprovalKind::Patch,
             })
+        }
+
+        EventMsg::RequestUserInput(request) => {
+            let summary = request
+                .questions
+                .iter()
+                .map(|q| format!("{}: {}", q.header, q.question))
+                .collect::<Vec<_>>()
+                .join("\n");
+            TelegramAction::Send(format!("Question from agent:\n{summary}"))
         }
 
         _ => TelegramAction::Skip,

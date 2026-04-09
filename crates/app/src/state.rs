@@ -10,10 +10,12 @@ use dashboard::SharedDashboard;
 pub struct AppState {
     pub rt: tokio::runtime::Runtime,
     pub dashboard: SharedDashboard,
-    pub bot_launcher: BotLauncher,
     pub bot_handle: Option<tokio::task::JoinHandle<()>>,
     pub saved_instances: Vec<SavedInstance>,
     pub custodex_dir: PathBuf,
+    pub token: String,
+    pub sandbox_exe: Option<PathBuf>,
+    pub launcher_override: Option<BotLauncher>,
     pub log_filter_chat: Option<i64>,
     pub log_filter_text: String,
 }
@@ -22,8 +24,36 @@ impl AppState {
     pub fn new(
         rt: tokio::runtime::Runtime,
         dashboard: SharedDashboard,
+        custodex_dir: PathBuf,
+        token: String,
+        sandbox_exe: Option<PathBuf>,
+    ) -> Self {
+        Self::new_inner(rt, dashboard, custodex_dir, token, sandbox_exe, None)
+    }
+
+    pub fn new_with_launcher(
+        rt: tokio::runtime::Runtime,
+        dashboard: SharedDashboard,
         bot_launcher: BotLauncher,
         custodex_dir: PathBuf,
+    ) -> Self {
+        Self::new_inner(
+            rt,
+            dashboard,
+            custodex_dir,
+            String::new(),
+            None,
+            Some(bot_launcher),
+        )
+    }
+
+    fn new_inner(
+        rt: tokio::runtime::Runtime,
+        dashboard: SharedDashboard,
+        custodex_dir: PathBuf,
+        token: String,
+        sandbox_exe: Option<PathBuf>,
+        launcher_override: Option<BotLauncher>,
     ) -> Self {
         let mut saved_instances = load_instances(&custodex_dir);
         if saved_instances.is_empty() {
@@ -45,25 +75,54 @@ impl AppState {
         Self {
             rt,
             dashboard,
-            bot_launcher,
             bot_handle: None,
             saved_instances,
             custodex_dir,
+            token,
+            sandbox_exe,
+            launcher_override,
             log_filter_chat: None,
             log_filter_text: String::new(),
         }
     }
 
     pub fn start_bot(&mut self) {
+        self.start_bot_for_instance(None);
+    }
+
+    pub fn start_bot_for_instance(&mut self, selected_instance: Option<usize>) {
         if self.bot_handle.is_some() {
+            return;
+        }
+        let instance = self.instance_to_launch(selected_instance);
+        let work_dir = self.work_dir_for_instance(&instance);
+        if let Err(e) = std::fs::create_dir_all(&work_dir) {
+            let mut d = self.dashboard.lock().unwrap();
+            d.service_status = dashboard::ServiceStatus::Error(format!(
+                "Failed to create work dir {}: {e}",
+                work_dir.display()
+            ));
+            d.push_log(None, format!("Failed to create work dir {}: {e}", work_dir.display()));
             return;
         }
         {
             let mut d = self.dashboard.lock().unwrap();
             d.service_status = dashboard::ServiceStatus::Starting;
-            d.push_log(None, "Starting bot...".to_string());
+            d.config.model = self.model_for_instance(&instance).to_string();
+            d.push_log(
+                None,
+                format!(
+                    "Starting {} with work dir {}...",
+                    instance.id,
+                    work_dir.display()
+                ),
+            );
         }
-        let fut = (self.bot_launcher)();
+        let fut = if let Some(launcher) = &self.launcher_override {
+            launcher()
+        } else {
+            self.launcher_for_instance(&instance, work_dir)()
+        };
         self.bot_handle = Some(self.rt.spawn(fut));
     }
 
@@ -139,6 +198,65 @@ impl AppState {
             })
             .map(|e| (e.chat_id, e.message.clone()))
             .collect()
+    }
+
+    fn instance_to_launch(&self, selected_instance: Option<usize>) -> SavedInstance {
+        if let Some(idx) = selected_instance.and_then(|idx| self.saved_instances.get(idx)) {
+            return idx.clone();
+        }
+        self.saved_instances
+            .first()
+            .cloned()
+            .expect("expected at least one saved instance")
+    }
+
+    fn work_dir_for_instance(&self, instance: &SavedInstance) -> PathBuf {
+        match &instance.config {
+            TemplateConfig::CodeAgent(cfg) => PathBuf::from(&cfg.work_dir),
+            TemplateConfig::AutoApprove(cfg) => PathBuf::from(&cfg.work_dir),
+            TemplateConfig::SimpleChat(_) => PathBuf::from(format!(
+                ".local/home/{}",
+                simple_chat::TEMPLATE_NAME
+            )),
+        }
+    }
+
+    fn model_for_instance<'a>(&self, instance: &'a SavedInstance) -> &'a str {
+        match &instance.config {
+            TemplateConfig::CodeAgent(cfg) => &cfg.model,
+            TemplateConfig::SimpleChat(cfg) => &cfg.model,
+            TemplateConfig::AutoApprove(cfg) => &cfg.model,
+        }
+    }
+
+    fn launcher_for_instance(
+        &self,
+        instance: &SavedInstance,
+        work_dir: PathBuf,
+    ) -> dashboard::gui::BotLauncher {
+        match &instance.config {
+            TemplateConfig::CodeAgent(_) => code_agent::make_launcher(
+                self.token.clone(),
+                self.dashboard.clone(),
+                work_dir,
+                self.custodex_dir.clone(),
+                self.sandbox_exe.clone(),
+            ),
+            TemplateConfig::SimpleChat(_) => simple_chat::make_launcher(
+                self.token.clone(),
+                self.dashboard.clone(),
+                work_dir,
+                self.custodex_dir.clone(),
+                self.sandbox_exe.clone(),
+            ),
+            TemplateConfig::AutoApprove(_) => auto_approve::make_launcher(
+                self.token.clone(),
+                self.dashboard.clone(),
+                work_dir,
+                self.custodex_dir.clone(),
+                self.sandbox_exe.clone(),
+            ),
+        }
     }
 }
 

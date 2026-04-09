@@ -2,7 +2,7 @@
 
 ## Overview
 
-codex-telegram is a single-process application with two subsystems:
+`custodex` is a single-process application with two main subsystems:
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -48,44 +48,47 @@ codex-telegram is a single-process application with two subsystems:
 
 ## Components
 
-### main.rs — Entry point
-- Reads bot token from `.local/telegram_bot_token` (or CLI arg)
-- Creates tokio runtime
-- Creates shared Dashboard
-- Launches eframe window (blocks main thread)
+### `crates/app/src/main.rs` — entry point
+- Reads the Telegram token from `.local/telegram_bot_token` or the first CLI arg
+- Creates `.local/home/.custodex` for local instance persistence
+- Builds the tokio runtime and shared dashboard
+- Launches the native `eframe` window
+- Currently wires the `code-agent` launcher during startup
 
-### gui.rs — Control Panel (eframe::App)
-- Reads Dashboard each frame (200ms repaint interval)
-- Start/Stop button spawns or aborts the bot task on the tokio runtime
-- Pure monitoring/debugging — no bot interaction
+### `crates/app/src/state.rs` — desktop app state
+- Owns the runtime handle, dashboard handle, bot launcher, and saved instances
+- Seeds default instances for first run
+- Starts and stops the background bot task
+- Filters log display by chat id or search text
 
-### bot.rs — Telegram dispatcher
-- Creates teloxide `Bot` and `Dispatcher`
-- Routes messages to `handle_message`, callbacks to `handle_callback`
-- Runs until aborted (Stop button) or error
+### `crates/bots/*/src/bot.rs` — template-specific Telegram runtimes
+- `code-agent`: manual approval flow with inline keyboard callbacks
+- `simple-chat`: streams text, ignores approval prompts
+- `auto-approve`: automatically approves exec and patch requests
 
-### instance.rs — Session management
-- `InstanceManager` maps `ChatId` → `BotInstance` (CodexThread + pending approval)
-- On user message: submits `Op::UserInput`, drains events until turn ends
-- On approval callback: submits `Op::ExecApproval` or `Op::PatchApproval`, resumes draining
-- Pushes all activity to Dashboard for GUI display
+### `crates/bots/all-bots/src/lib.rs` — template registry
+- Defines `TemplateKind`, `TemplateConfig`, wizard rendering, and saved-instance persistence
+- Persists saved instances to `.custodex/instances.json`
 
-### adapter.rs — Event classification
-- `classify_event(EventMsg) -> TelegramAction`
-- Categories: `Delta` (stream text), `Send` (standalone message), `ApprovalPrompt` (inline keyboard), `Skip`
-- AgentMessage skipped (deltas already cover it)
+### `crates/codex/bridge/src/instance.rs` — Codex thread management
+- Owns a `ThreadManager`
+- Lazily maps `ChatId` to `BotInstance`
+- Submits user text and approval ops into the correct `CodexThread`
 
-### monitor.rs — Shared state
-- `Dashboard`: log entries, instance info, token counts, bot status, config
-- Protected by `Arc<std::sync::Mutex<...>>` (std, not tokio — GUI thread isn't async)
-- Bounded log (2000 entries, oldest dropped)
+### `crates/channels/telegram-adapter/src/*` — event classification
+- Maps `EventMsg` to `TelegramAction`
+- Handles streaming delta accumulation and message edit behavior
+
+### `crates/ui/dashboard/src/*` — shared dashboard state
+- Stores bounded log entries, active chat activity, token counters, and service status
+- Uses `Arc<std::sync::Mutex<Dashboard>>` because the GUI thread is synchronous
 
 ## Data flow
 
 ### User message
 ```
-Telegram → teloxide → handle_message → InstanceManager::handle_user_message
-  → get_or_create_chat (creates CodexThread if new)
+Telegram → teloxide bot handler → InstanceManager::submit_text
+  → get_or_create(chat) if needed
   → thread.submit(Op::UserInput)
   → drain_events loop:
       thread.next_event() → adapter::classify_event → match:
@@ -98,15 +101,13 @@ Telegram → teloxide → handle_message → InstanceManager::handle_user_messag
 
 ### Approval callback
 ```
-Telegram inline button → teloxide → handle_callback
-  → InstanceManager::handle_approval_callback
+Telegram inline button → teloxide callback handler
+  → InstanceManager::submit_approval
   → thread.submit(Op::ExecApproval or Op::PatchApproval)
   → drain_events (resumes from where it paused)
 ```
 
-## Dependencies on codex
-
-All path dependencies to `../codex/codex-rs/`:
+## Dependencies on Codex
 
 | Crate | What we use |
 |-------|-------------|
@@ -117,6 +118,10 @@ All path dependencies to `../codex/codex-rs/`:
 | codex-models-manager | CollaborationModesConfig |
 
 The Landlock sandbox binary (`codex-linux-sandbox`) is passed via `ConfigOverrides::codex_linux_sandbox_exe`.
+
+## Known limitation
+
+- Saved instances are persisted and shown in the UI, but startup still launches a single pre-wired bot runtime instead of instantiating saved templates dynamically.
 
 ## Threading model
 

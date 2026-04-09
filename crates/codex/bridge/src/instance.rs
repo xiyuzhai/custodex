@@ -34,12 +34,14 @@ pub struct InstanceManager {
     thread_mgr: Arc<ThreadManager>,
     instances: DashMap<i64, Arc<Mutex<BotInstance>>>,
     work_dir: PathBuf,
+    sandbox_exe: Option<PathBuf>,
 }
 
 impl InstanceManager {
     pub async fn new(im_config: InstanceManagerConfig) -> Self {
+        let sandbox_exe = im_config.sandbox_exe.clone();
         let overrides = ConfigOverrides {
-            codex_linux_sandbox_exe: im_config.sandbox_exe,
+            codex_linux_sandbox_exe: sandbox_exe.clone(),
             cwd: Some(im_config.work_dir.clone()),
             ..Default::default()
         };
@@ -69,6 +71,7 @@ impl InstanceManager {
             thread_mgr,
             instances: DashMap::new(),
             work_dir: im_config.work_dir,
+            sandbox_exe,
         }
     }
 
@@ -83,7 +86,14 @@ impl InstanceManager {
             return inst.clone();
         }
 
-        let thread_config = Config::load_with_cli_overrides(vec![])
+        let thread_config = Config::load_with_cli_overrides_and_harness_overrides(
+            vec![],
+            ConfigOverrides {
+                codex_linux_sandbox_exe: self.sandbox_exe.clone(),
+                cwd: Some(self.work_dir.clone()),
+                ..Default::default()
+            },
+        )
             .await
             .expect("failed to load config for new thread");
 

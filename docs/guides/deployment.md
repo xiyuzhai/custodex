@@ -29,12 +29,14 @@
 make run
 ```
 
-This builds and launches the egui control panel. Click **Start** to connect the bot.
+This builds and launches the native `egui` control panel. Click **Start** to connect the currently wired bot runtime.
 
 Alternatively, with a custom token path:
 ```
 cargo run -- /path/to/token/file
 ```
+
+At the moment, the desktop app persists multiple saved template configs, but startup still wires the `code-agent` launcher in `crates/app/src/main.rs`.
 
 ## Configuration
 
@@ -56,20 +58,18 @@ The sandbox executable is resolved at compile time to `../codex/codex-rs/target/
 | `OPENAI_API_KEY` | API key (alternative to codex login) |
 | `RUST_LOG` | Logging level (e.g., `RUST_LOG=info`) |
 
-## File layout
+## Relevant files
 
 ```
-.local/
-  telegram_bot_token    # bot token (gitignored)
-docs/
-  architecture.md       # system design
-  events.md             # event handling reference
-  deployment.md         # this file
-src/
-  main.rs               # entry point
-  gui.rs                # egui control panel
-  bot.rs                # telegram dispatcher
-  instance.rs            # per-chat codex thread management
-  adapter.rs            # event classification
-  monitor.rs            # shared monitoring state
+README.md
+Cargo.toml
+crates/app/src/main.rs                 # native app entrypoint
+crates/app/src/state.rs                # desktop app state and saved instances
+crates/bots/code-agent/src/bot.rs      # approval-driven Telegram runtime
+crates/bots/simple-chat/src/bot.rs     # text-only Telegram runtime
+crates/bots/auto-approve/src/bot.rs    # auto-approve Telegram runtime
+crates/bots/all-bots/src/lib.rs        # template configs and wizard
+crates/codex/bridge/src/instance.rs    # per-chat Codex thread management
+crates/channels/telegram-adapter/src/  # event classification and Telegram deltas
+crates/ui/dashboard/src/               # dashboard state and shared panels
 ```

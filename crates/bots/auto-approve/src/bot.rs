@@ -96,13 +96,18 @@ async fn handle_message(bot: Bot, msg: Message, state: Arc<BotState>) -> Respons
     let thread = state.instance_mgr.submit_text(cid, text).await;
 
     let mut delta_buf = String::new();
-    let mut delta_msg_id: Option<MessageId> = None;
+    let mut delta_msg_id: Option<MessageId> = bot
+        .send_message(chat_id, "In progress...")
+        .await
+        .ok()
+        .map(|m| m.id);
     let mut last_edit = Instant::now();
 
     loop {
         let event = match thread.next_event().await {
             Ok(ev) => ev,
             Err(e) => {
+                tracing::error!("event stream error for chat {cid}: {e}");
                 state.log(Some(cid), format!("Event stream error: {e}"));
                 break;
             }
@@ -137,6 +142,9 @@ async fn handle_message(bot: Bot, msg: Message, state: Arc<BotState>) -> Respons
                     send_or_edit_delta(&bot, chat_id, delta_msg_id, &delta_buf).await;
                     delta_buf.clear();
                     delta_msg_id = None;
+                } else if let Some(msg_id) = delta_msg_id.take() {
+                    bot.edit_message_text(chat_id, msg_id, &text).await.ok();
+                    continue;
                 }
                 bot.send_message(chat_id, text).await.ok();
             }

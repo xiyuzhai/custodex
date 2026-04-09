@@ -4,8 +4,10 @@
 
 ```
 crates/
+├── app/                     # native desktop entrypoint and app state
 ├── codex/                   # Codex-specific code (isolated from the rest)
-│   └── bridge/              # codex-bridge: wraps codex-core, re-exports types
+│   ├── bridge/              # codex-bridge: wraps codex-core, re-exports types
+│   └── sandbox/             # codex-sandbox: resolves/builds codex-linux-sandbox
 │
 ├── llm/                     # LLM abstractions (backend-agnostic)
 │   └── core/                # llm-core: traits and types (grow when needed)
@@ -16,23 +18,34 @@ crates/
 ├── ui/                      # User interfaces
 │   └── dashboard/           # egui control panel, Dashboard state, ServiceStatus
 │
-└── bots/                    # Bot templates (each is a binary crate)
-    └── code-agent/          # Full code agent with tool execution and approval flow
+└── bots/                    # Bot templates and shared template definitions
+    ├── all-bots/            # template enum/configs, wizard flow, instance persistence
+    ├── code-agent/          # full code agent with tool execution and approval flow
+    ├── simple-chat/         # text conversation only
+    └── auto-approve/        # code agent with auto-approved tool calls
 ```
 
 ## Dependency graph
 
 ```
-bots/code-agent
+app
+  ├── all-bots
+  ├── code-agent
+  ├── codex-sandbox
+  └── dashboard
+
+bots/*
   ├── codex-bridge
   ├── telegram-adapter
-  │   └── codex-bridge
   └── dashboard
+
+telegram-adapter
+  └── codex-bridge
 ```
 
 ## Principles
 
-- **Bot templates never depend on codex crates directly** — they go through codex-bridge
+- **Bot templates should depend on Codex through `codex-bridge`** when they need thread/protocol access
 - **Channels don't depend on UI** — telegram-adapter and dashboard are independent
 - **All dependencies use workspace.dependencies** — versions and paths defined once at root
 - **Each crate group has a single responsibility** — codex isolation, channel transport, UI, bot behavior

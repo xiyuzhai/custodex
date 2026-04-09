@@ -2900,10 +2900,12 @@ name = "custodex"
 version = "0.1.0"
 dependencies = [
  "all-bots",
+ "auto-approve",
  "code-agent",
  "codex-sandbox",
  "dashboard",
  "eframe",
+ "simple-chat",
  "tokio",
  "tracing-subscriber",
 ]
