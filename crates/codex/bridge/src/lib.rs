@@ -1,8 +1,10 @@
+mod conversation_id;
 mod instance;
 
-pub use instance::BotInstance;
-pub use instance::InstanceManager;
-pub use instance::InstanceManagerConfig;
+pub use conversation_id::CodexConversationId;
+pub use instance::CodexConversation;
+pub use instance::CodexConversationManager;
+pub use instance::CodexConversationManagerConfig;
 
 // Re-export codex types that downstream crates need.
 pub use codex_core::CodexThread;

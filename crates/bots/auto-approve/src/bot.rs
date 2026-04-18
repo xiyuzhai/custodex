@@ -2,7 +2,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use codex_bridge::{EventMsg, InstanceManager, InstanceManagerConfig, Op, ReviewDecision};
+use codex_bridge::{
+    CodexConversationManager, CodexConversationManagerConfig, CodexConversationId, EventMsg, Op, ReviewDecision,
+};
 use dashboard::{ServiceStatus, SharedDashboard};
 use telegram_adapter::{ApprovalKind, TelegramAction, classify_event, send_or_edit_delta};
 use teloxide::prelude::*;
@@ -11,7 +13,7 @@ use teloxide::types::{Me, MessageId};
 const EDIT_INTERVAL_MS: u128 = 500;
 
 struct BotState {
-    instance_mgr: Arc<InstanceManager>,
+    instance_mgr: Arc<CodexConversationManager>,
     dashboard: SharedDashboard,
 }
 
@@ -51,7 +53,7 @@ pub async fn run_bot(
     }
 
     let instance_mgr = Arc::new(
-        InstanceManager::new(InstanceManagerConfig {
+        CodexConversationManager::new(CodexConversationManagerConfig {
             work_dir,
             sandbox_exe,
             custodex_dir,
@@ -86,6 +88,7 @@ async fn handle_message(bot: Bot, msg: Message, state: Arc<BotState>) -> Respons
 
     let chat_id = msg.chat.id;
     let cid = chat_id.0;
+    let conv_id = CodexConversationId::new(cid);
 
     state.log(Some(cid), format!("User: {text}"));
     {
@@ -93,7 +96,7 @@ async fn handle_message(bot: Bot, msg: Message, state: Arc<BotState>) -> Respons
         d.update_instance_activity(cid);
     }
 
-    let thread = state.instance_mgr.submit_text(cid, text).await;
+    let thread = state.instance_mgr.submit_text(conv_id, text).await;
 
     let mut delta_buf = String::new();
     let mut delta_msg_id: Option<MessageId> = bot
@@ -173,7 +176,7 @@ async fn handle_message(bot: Bot, msg: Message, state: Arc<BotState>) -> Respons
                     },
                 };
 
-                if let Err(e) = state.instance_mgr.submit_approval(cid, op).await {
+                if let Err(e) = state.instance_mgr.submit_approval(conv_id, op).await {
                     state.log(Some(cid), format!("Auto-approve failed: {e}"));
                 }
                 // Continue draining — don't return

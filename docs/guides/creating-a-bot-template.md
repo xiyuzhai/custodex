@@ -47,7 +47,7 @@ Each step corresponds to a screen in the instance creation wizard. The config st
 
 ## 4. Implement message handling
 
-Define how your bot processes incoming messages and events. Use `codex-bridge::InstanceManager` for thread management and `telegram-adapter` for event classification.
+Define how your bot processes incoming messages and events. Use `codex-bridge::CodexConversationManager` for thread management and `telegram-adapter` for event classification.
 
 ## 5. Create main.rs
 

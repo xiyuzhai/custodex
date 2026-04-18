@@ -14,7 +14,7 @@ A bridge is an abstraction layer over an LLM backend. It hides the backend's int
 **codex-bridge** (`crates/codex/bridge/`)
 - Wraps codex-core's ThreadManager and CodexThread
 - Handles codex Config, ConfigOverrides, AuthManager setup
-- Provides InstanceManager for per-chat thread management
+- Provides CodexConversationManager for per-chat thread management
 - Re-exports EventMsg, Op, ReviewDecision, UserInput from codex-protocol
 
 ## Why a bridge

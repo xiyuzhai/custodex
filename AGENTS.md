@@ -22,7 +22,7 @@ This repository is a Rust workspace for a Telegram-delivered Codex runtime with 
 - Saved instance metadata is loaded from `.local/home/.custodex/instances.json`.
 - The UI can create and display multiple saved template configs.
 - Runtime launch is still single-launcher today: `setup()` currently wires only the `code-agent` launcher.
-- Per-chat Codex threads are created lazily by `InstanceManager` in `crates/codex/bridge/src/instance.rs`.
+- Per-chat Codex threads are created lazily by `CodexConversationManager` in `crates/codex/bridge/src/instance.rs`.
 
 ## Commands
 

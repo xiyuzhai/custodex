@@ -3,7 +3,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use codex_bridge::{EventMsg, InstanceManager, InstanceManagerConfig, Op, ReviewDecision};
+use codex_bridge::{
+    CodexConversationId, CodexConversationManager, CodexConversationManagerConfig, EventMsg, Op,
+    ReviewDecision,
+};
 use dashboard::{ServiceStatus, SharedDashboard};
 use telegram_adapter::{ApprovalKind, TelegramAction, classify_event, send_or_edit_delta};
 use teloxide::prelude::*;
@@ -21,7 +24,7 @@ struct PendingApproval {
 }
 
 struct BotState {
-    instance_mgr: Arc<InstanceManager>,
+    instance_mgr: Arc<CodexConversationManager>,
     dashboard: SharedDashboard,
     pending_approvals: Mutex<HashMap<i64, PendingApproval>>,
 }
@@ -59,7 +62,7 @@ pub async fn run_bot(
     }
 
     let instance_mgr = Arc::new(
-        InstanceManager::new(InstanceManagerConfig {
+        CodexConversationManager::new(CodexConversationManagerConfig {
             work_dir,
             sandbox_exe,
             custodex_dir,
@@ -96,6 +99,7 @@ async fn handle_message(bot: Bot, msg: Message, state: Arc<BotState>) -> Respons
 
     let chat_id = msg.chat.id;
     let cid = chat_id.0;
+    let conv_id = CodexConversationId::new(cid);
 
     state.log(Some(cid), format!("User: {text}"));
     {
@@ -103,7 +107,7 @@ async fn handle_message(bot: Bot, msg: Message, state: Arc<BotState>) -> Respons
         d.update_instance_activity(cid);
     }
 
-    let thread = state.instance_mgr.submit_text(cid, text).await;
+    let thread = state.instance_mgr.submit_text(conv_id, text).await;
     let progress_msg_id = bot
         .send_message(chat_id, "In progress...")
         .await
@@ -123,6 +127,7 @@ async fn handle_callback(bot: Bot, q: CallbackQuery, state: Arc<BotState>) -> Re
 
     let chat_id = msg.chat().id;
     let cid = chat_id.0;
+    let conv_id = CodexConversationId::new(cid);
 
     let approval = {
         let mut pending = state.pending_approvals.lock().await;
@@ -157,7 +162,7 @@ async fn handle_callback(bot: Bot, q: CallbackQuery, state: Arc<BotState>) -> Re
         },
     };
 
-    if let Err(e) = state.instance_mgr.submit_approval(cid, op).await {
+    if let Err(e) = state.instance_mgr.submit_approval(conv_id, op).await {
         tracing::error!("failed to submit approval: {e}");
         bot.send_message(chat_id, format!("Failed to submit approval: {e}"))
             .await
@@ -194,6 +199,7 @@ async fn drain_events(
     initial_msg_id: Option<MessageId>,
 ) {
     let cid = chat_id.0;
+    let conv_id = CodexConversationId::new(cid);
     let mut delta_buf = String::new();
     let mut delta_msg_id: Option<MessageId> = initial_msg_id;
     let mut last_edit = Instant::now();
@@ -278,7 +284,7 @@ async fn drain_events(
                     .ok();
 
                 // Store pending approval — handle_callback will resume
-                let inst = state.instance_mgr.get_or_create(cid).await;
+                let inst = state.instance_mgr.get_or_create(conv_id).await;
                 let thread_arc = {
                     let i = inst.lock().await;
                     Arc::clone(&i.thread)

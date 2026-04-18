@@ -14,8 +14,10 @@ use codex_protocol::user_input::UserInput;
 use dashmap::DashMap;
 use tokio::sync::Mutex;
 
-/// Configuration for creating an InstanceManager.
-pub struct InstanceManagerConfig {
+use crate::conversation_id::CodexConversationId;
+
+/// Configuration for creating a CodexConversationManager.
+pub struct CodexConversationManagerConfig {
     /// Working directory for bot instances.
     pub work_dir: PathBuf,
     /// Path to the codex-linux-sandbox binary.
@@ -24,21 +26,21 @@ pub struct InstanceManagerConfig {
     pub custodex_dir: PathBuf,
 }
 
-/// A single bot instance bound to a chat. Wraps a CodexThread.
-pub struct BotInstance {
+/// A single codex instance bound to a chat. Wraps a CodexThread.
+pub struct CodexConversation {
     pub thread: Arc<CodexThread>,
 }
 
 /// Manages bot instances (one per chat). Wraps codex ThreadManager.
-pub struct InstanceManager {
+pub struct CodexConversationManager {
     thread_mgr: Arc<ThreadManager>,
-    instances: DashMap<i64, Arc<Mutex<BotInstance>>>,
+    instances: DashMap<CodexConversationId, Arc<Mutex<CodexConversation>>>,
     work_dir: PathBuf,
     sandbox_exe: Option<PathBuf>,
 }
 
-impl InstanceManager {
-    pub async fn new(im_config: InstanceManagerConfig) -> Self {
+impl CodexConversationManager {
+    pub async fn new(im_config: CodexConversationManagerConfig) -> Self {
         let sandbox_exe = im_config.sandbox_exe.clone();
         let overrides = ConfigOverrides {
             codex_linux_sandbox_exe: sandbox_exe.clone(),
@@ -80,9 +82,9 @@ impl InstanceManager {
         &self.work_dir
     }
 
-    /// Get or create a bot instance for the given chat ID.
-    pub async fn get_or_create(&self, chat_id: i64) -> Arc<Mutex<BotInstance>> {
-        if let Some(inst) = self.instances.get(&chat_id) {
+    /// Get or create a codex instance for the given conversation.
+    pub async fn get_or_create(&self, id: CodexConversationId) -> Arc<Mutex<CodexConversation>> {
+        if let Some(inst) = self.instances.get(&id) {
             return inst.clone();
         }
 
@@ -107,14 +109,14 @@ impl InstanceManager {
             .await
             .expect("failed to start codex thread");
 
-        let inst = Arc::new(Mutex::new(BotInstance { thread }));
-        self.instances.insert(chat_id, Arc::clone(&inst));
+        let inst = Arc::new(Mutex::new(CodexConversation { thread }));
+        self.instances.insert(id, Arc::clone(&inst));
         inst
     }
 
-    /// Submit a text message to the instance for a given chat.
-    pub async fn submit_text(&self, chat_id: i64, text: &str) -> Arc<CodexThread> {
-        let inst = self.get_or_create(chat_id).await;
+    /// Submit a text message to the instance for a given conversation.
+    pub async fn submit_text(&self, id: CodexConversationId, text: &str) -> Arc<CodexThread> {
+        let inst = self.get_or_create(id).await;
         let thread = {
             let i = inst.lock().await;
             Arc::clone(&i.thread)
@@ -137,10 +139,10 @@ impl InstanceManager {
     /// Submit an approval decision.
     pub async fn submit_approval(
         &self,
-        chat_id: i64,
+        id: CodexConversationId,
         op: Op,
     ) -> Result<(), codex_protocol::error::CodexErr> {
-        let inst = self.get_or_create(chat_id).await;
+        let inst = self.get_or_create(id).await;
         let thread = {
             let i = inst.lock().await;
             Arc::clone(&i.thread)

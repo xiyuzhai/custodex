@@ -31,8 +31,8 @@
 │  │  │        │                   │             │  │  │
 │  │  │        ▼                   ▼             │  │  │
 │  │  │  ┌───────────────────────────────────┐   │  │  │
-│  │  │  │         InstanceManager            │   │  │  │
-│  │  │  │  DashMap<ChatId, BotInstance>       │   │  │  │
+│  │  │  │         CodexConversationManager            │   │  │  │
+│  │  │  │  DashMap<ChatId, CodexConversation>    │   │  │  │
 │  │  │  └──────────────┬────────────────────┘   │  │  │
 │  │  │                 │                        │  │  │
 │  │  │                 ▼                        │  │  │
@@ -72,7 +72,7 @@
 
 ### `crates/codex/bridge/src/instance.rs` — Codex thread management
 - Owns a `ThreadManager`
-- Lazily maps `ChatId` to `BotInstance`
+- Lazily maps `ChatId` to `CodexConversation`
 - Submits user text and approval ops into the correct `CodexThread`
 
 ### `crates/channels/telegram-adapter/src/*` — event classification
@@ -87,7 +87,7 @@
 
 ### User message
 ```
-Telegram → teloxide bot handler → InstanceManager::submit_text
+Telegram → teloxide bot handler → CodexConversationManager::submit_text
   → get_or_create(chat) if needed
   → thread.submit(Op::UserInput)
   → drain_events loop:
@@ -102,7 +102,7 @@ Telegram → teloxide bot handler → InstanceManager::submit_text
 ### Approval callback
 ```
 Telegram inline button → teloxide callback handler
-  → InstanceManager::submit_approval
+  → CodexConversationManager::submit_approval
   → thread.submit(Op::ExecApproval or Op::PatchApproval)
   → drain_events (resumes from where it paused)
 ```
