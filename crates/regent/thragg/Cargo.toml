@@ -1,0 +1,14 @@
+[package]
+name = "thragg"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "thragg"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+tokio = { workspace = true }

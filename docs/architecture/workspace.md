@@ -18,11 +18,14 @@ crates/
 ├── ui/                      # User interfaces
 │   └── dashboard/           # egui control panel, Dashboard state, ServiceStatus
 │
-└── bots/                    # Bot templates and shared template definitions
-    ├── all-bots/            # template enum/configs, wizard flow, instance persistence
-    ├── code-agent/          # full code agent with tool execution and approval flow
-    ├── simple-chat/         # text conversation only
-    └── auto-approve/        # code agent with auto-approved tool calls
+├── bots/                    # Bot templates and shared template definitions
+│   ├── all-bots/            # template enum/configs, wizard flow, instance persistence
+│   ├── code-agent/          # full code agent with tool execution and approval flow
+│   ├── simple-chat/         # text conversation only
+│   └── auto-approve/        # code agent with auto-approved tool calls
+│
+└── regent/                  # Review-agents that stand in for the user
+    └── thragg/              # CLI prototype: Claude Code Stop hook driver
 ```
 
 ## Dependency graph

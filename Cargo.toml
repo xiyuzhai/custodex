@@ -10,6 +10,7 @@ members = [
     "crates/bots/simple-chat",
     "crates/bots/auto-approve",
     "crates/bots/all-bots",
+    "crates/regent/thragg",
 ]
 resolver = "2"
 
@@ -28,6 +29,7 @@ code-agent = { path = "crates/bots/code-agent" }
 simple-chat = { path = "crates/bots/simple-chat" }
 auto-approve = { path = "crates/bots/auto-approve" }
 all-bots = { path = "crates/bots/all-bots" }
+thragg = { path = "crates/regent/thragg" }
 
 # Codex deps (pinned to xiyuzhai/codex fork)
 codex-core = { git = "https://github.com/xiyuzhai/codex", rev = "4fd5c35c4f6f51048f47c8680ed0f6a26c608f68" }
