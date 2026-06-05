@@ -1,5 +1,8 @@
 [workspace]
 members = [
+    # custodex: this fork's customizations (see custodex/README.md).
+    # Glob so new custom crates need no further edits to this list.
+    "custodex/*",
     "aws-auth",
     "analytics",
     "agent-graph-store",
