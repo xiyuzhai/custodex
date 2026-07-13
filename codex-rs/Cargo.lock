@@ -5070,6 +5070,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "custodex-extension"
+version = "0.0.0"
+dependencies = [
+ "codex-extension-api",
+]
+
+[[package]]
 name = "cxx"
 version = "1.0.194"
 source = "registry+https://github.com/rust-lang/crates.io-index"
